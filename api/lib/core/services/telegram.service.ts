@@ -309,9 +309,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     let message = '';
     let keyboard: any = null;
 
+    // Helper function to escape Markdown special characters
+    const escapeMarkdown = (text: string): string => {
+      return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+    };
+
     switch (response.type) {
       case 'confirmation':
-        message = `⚠️ **Confirmation Required**\n\n${response.message}`;
+        message = `⚠️ **Confirmation Required**\n\n${escapeMarkdown(response.message)}`;
         keyboard = {
           inline_keyboard: [
             [
@@ -325,7 +330,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         break;
 
       case 'success':
-        message = `✅ **Success**\n\n${response.message}`;
+        message = `✅ **Success**\n\n${escapeMarkdown(response.message)}`;
         if (response.metadata?.pr) {
           message += `\n\n🔗 **Pull Request**: ${response.metadata.pr}`;
         }
@@ -335,12 +340,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         break;
 
       case 'error':
-        message = `❌ **Error**\n\n${response.message}`;
+        message = `❌ **Error**\n\n${escapeMarkdown(response.message)}`;
         break;
 
       case 'information':
       default:
-        message = `ℹ️ **Update**\n\n${response.message}`;
+        message = `ℹ️ **Update**\n\n${escapeMarkdown(response.message)}`;
         break;
     }
 
@@ -353,7 +358,19 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       messageOptions.reply_markup = keyboard;
     }
 
-    await this.bot.sendMessage(chatId, message, messageOptions);
+    try {
+      await this.bot.sendMessage(chatId, message, messageOptions);
+    } catch (error) {
+      console.error('[Claude] Telegram send error:', error);
+      // Fallback: send without markdown formatting
+      try {
+        await this.bot.sendMessage(chatId, message.replace(/\*\*/g, ''), {
+          disable_web_page_preview: true,
+        });
+      } catch (fallbackError) {
+        console.error('[Claude] Fallback send failed:', fallbackError);
+      }
+    }
   }
 
   /**

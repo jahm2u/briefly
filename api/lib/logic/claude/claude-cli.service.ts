@@ -20,7 +20,7 @@ export interface ClaudeResponse {
 
 @Injectable()
 export class ClaudeCliService {
-  private readonly claudeDir = path.join(process.cwd(), '.claude');
+  private readonly claudeDir = path.join(process.cwd(), '..', '.claude');
   private readonly commandsDir = path.join(this.claudeDir, 'commands');
 
   async executeCommand(
@@ -34,6 +34,21 @@ export class ClaudeCliService {
         this.commandsDir,
         `${selection.command}_t.md`,
       );
+      
+      // Check if the template file exists
+      try {
+        await fs.access(templatePath);
+      } catch (error) {
+        console.error(`[Claude] Template file not found: ${templatePath}`);
+        return {
+          type: 'error',
+          message: `Template file not found: ${selection.command}_t.md. Please ensure the .claude/commands/ directory exists in the project root with the necessary template files.`,
+          metadata: {
+            command: selection.command,
+          },
+        };
+      }
+      
       let template = await fs.readFile(templatePath, 'utf-8');
 
       // Replace $ARGUMENTS with the actual request
@@ -43,14 +58,14 @@ export class ClaudeCliService {
       const tempFile = path.join(this.claudeDir, `temp_${Date.now()}.md`);
       await fs.writeFile(tempFile, template);
 
-      // Execute Claude CLI with the template
-      const claudeCommand = `cd ${process.cwd()} && claude --file ${tempFile}`;
+      // Execute Claude CLI with optimized flags for automation
+      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && claude --file ${tempFile} -p --output-format json --max-turns 10 --verbose`;
 
-      console.log(`Executing Claude CLI: ${claudeCommand}`);
+      console.log(`[Claude] Executing: ${claudeCommand}`);
 
       const { stdout, stderr } = await execAsync(claudeCommand, {
-        timeout: 300000, // 5 minutes
-        maxBuffer: 10 * 1024 * 1024, // 10MB
+        timeout: 600000, // 10 minutes for complex operations
+        maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large outputs
       });
 
       // Clean up temp file
@@ -65,7 +80,7 @@ export class ClaudeCliService {
 
       return response;
     } catch (error) {
-      console.error('Error executing Claude CLI:', error);
+      console.error('[Claude] Error executing Claude CLI:', error);
       return {
         type: 'error',
         message: `Failed to execute Claude CLI: ${error.message}`,
@@ -81,6 +96,9 @@ export class ClaudeCliService {
     stderr: string,
     command: string,
   ): Promise<ClaudeResponse> {
+    console.log(`[Claude] Raw stdout length: ${stdout.length}`);
+    console.log(`[Claude] Raw stderr: ${stderr}`);
+    
     // Check for errors first
     if (stderr && stderr.trim()) {
       return {
@@ -88,6 +106,17 @@ export class ClaudeCliService {
         message: `Claude CLI error: ${stderr.trim()}`,
         metadata: { command },
       };
+    }
+
+    // Try to parse JSON output first (from --output-format json)
+    try {
+      const jsonOutput = JSON.parse(stdout);
+      if (jsonOutput.content) {
+        return this.parseStructuredResponse(jsonOutput.content, command);
+      }
+    } catch (e) {
+      // Not JSON, continue with text parsing
+      console.log('[Claude] Output not in JSON format, parsing as text');
     }
 
     // Look for confirmation requests
@@ -98,6 +127,8 @@ export class ClaudeCliService {
       /confirm/i,
       /please approve/i,
       /review.*and confirm/i,
+      /permission.*required/i,
+      /allow.*to/i,
     ];
 
     const needsConfirmation = confirmationPatterns.some((pattern) =>
@@ -121,6 +152,8 @@ export class ClaudeCliService {
       /created.*issue/i,
       /pull request.*created/i,
       /deployed/i,
+      /committed/i,
+      /pushed/i,
     ];
 
     const isSuccess = successPatterns.some((pattern) => pattern.test(stdout));
@@ -195,6 +228,61 @@ export class ClaudeCliService {
       : 'Processing your request...';
   }
 
+  private parseStructuredResponse(content: string, command: string): ClaudeResponse {
+    // Parse structured JSON response from Claude CLI
+    const confirmationPatterns = [
+      /would you like me to/i,
+      /should i proceed/i,
+      /do you want me to/i,
+      /confirm/i,
+      /please approve/i,
+      /review.*and confirm/i,
+      /permission.*required/i,
+    ];
+
+    const needsConfirmation = confirmationPatterns.some((pattern) =>
+      pattern.test(content),
+    );
+
+    if (needsConfirmation) {
+      return {
+        type: 'confirmation',
+        message: this.extractConfirmationMessage(content),
+        needsConfirmation: true,
+        metadata: { command },
+      };
+    }
+
+    const successPatterns = [
+      /✅/,
+      /successfully/i,
+      /completed/i,
+      /created.*issue/i,
+      /pull request.*created/i,
+      /deployed/i,
+      /committed/i,
+    ];
+
+    const isSuccess = successPatterns.some((pattern) => pattern.test(content));
+
+    if (isSuccess) {
+      return {
+        type: 'success',
+        message: this.extractSuccessMessage(content),
+        metadata: {
+          command,
+          ...this.extractMetadata(content),
+        },
+      };
+    }
+
+    return {
+      type: 'information',
+      message: this.extractInformationMessage(content),
+      metadata: { command },
+    };
+  }
+
   private extractMetadata(output: string): any {
     const metadata: any = {};
 
@@ -210,6 +298,18 @@ export class ClaudeCliService {
       metadata.pr = prMatch[0];
     }
 
+    // Extract issue URLs
+    const issueMatch = output.match(/https:\/\/github\.com\/[^\s]+\/issues\/\d+/);
+    if (issueMatch) {
+      metadata.issue = issueMatch[0];
+    }
+
+    // Extract commit hashes
+    const commitMatch = output.match(/([a-f0-9]{7,40})/);
+    if (commitMatch) {
+      metadata.commit = commitMatch[1];
+    }
+
     return metadata;
   }
 
@@ -218,29 +318,41 @@ export class ClaudeCliService {
     context?: any,
   ): Promise<ClaudeResponse> {
     try {
-      // Handle confirmation response
+      // Continue the Claude CLI session with the confirmation response
       const response = confirm ? 'yes' : 'no';
+      
+      console.log(`[Claude] Sending confirmation: ${response}`);
 
-      // This would typically continue the Claude CLI conversation
-      // For now, we'll simulate the continuation
+      // Use continue flag to maintain session state
+      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && echo "${response}" | claude -c -p --output-format json --verbose`;
+      
+      const { stdout, stderr } = await execAsync(claudeCommand, {
+        timeout: 600000, // 10 minutes
+        maxBuffer: 50 * 1024 * 1024, // 50MB
+      });
 
-      if (confirm) {
+      if (stderr && stderr.trim()) {
         return {
-          type: 'success',
-          message: 'Confirmed. Proceeding with the operation...',
-          metadata: context,
-        };
-      } else {
-        return {
-          type: 'information',
-          message: 'Operation cancelled.',
+          type: 'error',
+          message: `Confirmation failed: ${stderr.trim()}`,
           metadata: context,
         };
       }
+
+      // Parse the response
+      const result = await this.parseClaudeResponse(stdout, stderr, context?.command || 'confirmation');
+      
+      return {
+        ...result,
+        metadata: { ...result.metadata, ...context },
+      };
+      
     } catch (error) {
+      console.error('[Claude] Confirmation error:', error);
       return {
         type: 'error',
         message: `Failed to process confirmation: ${error.message}`,
+        metadata: context,
       };
     }
   }
