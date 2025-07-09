@@ -19,16 +19,11 @@ jobs:
           username: ${{ secrets.DIGITALOCEAN_USERNAME }}
           key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
           script: |
-            # Navigate to app directory
-            cd /root/briefly
-
-            # Gracefully stop the PM2 process and wait
-            pm2 stop briefly || true
-            sleep 5  # Give time for graceful shutdown
-
-            # Delete the process to ensure clean restart
-            pm2 delete briefly || true
-            sleep 2  # Wait for process cleanup
+            # Stop any existing PM2 processes as briefly user
+            sudo -u briefly pm2 stop briefly || true
+            sleep 5
+            sudo -u briefly pm2 delete briefly || true
+            sleep 2
 
             # Check if port 5100 is still in use
             if lsof -i:5100; then
@@ -37,43 +32,49 @@ jobs:
               sleep 2
             fi
 
-            # Backup current .env file
-            cp .env .env.backup
+            # Switch to briefly user for deployment
+            sudo -u briefly bash << 'EOF'
+              # Navigate to app directory
+              cd /home/briefly/briefly
 
-            # Pull latest changes
-            git pull origin main
+              # Backup current .env file
+              cp .env .env.backup
 
-            # Restore .env file
-            cp .env.backup .env
-            rm .env.backup
+              # Pull latest changes
+              git pull origin main
 
-            # Navigate to api directory
-            cd api
+              # Restore .env file
+              cp .env.backup .env
+              rm .env.backup
 
-            # Install dependencies
-            npm install
+              # Navigate to api directory
+              cd api
 
-            # Build the NestJS application
-            npm run build
+              # Install dependencies
+              npm install
 
-            # Start the PM2 process with specific port
-            PORT=5100 pm2 start dist/src/main.js --name briefly
+              # Build the NestJS application
+              npm run build
 
-            # Wait for process to start and verify it's running
-            for i in {1..12}; do
-              if pm2 show briefly | grep -q "online"; then
-                # Save PM2 process list
-                pm2 save
+              # Start the PM2 process with specific port
+              PORT=5100 pm2 start dist/src/main.js --name briefly
 
-                # Show status
-                pm2 status
-                echo "Deployment successful!"
-                exit 0
-              fi
-              sleep 5
-            done
+              # Wait for process to start and verify it's running
+              for i in {1..12}; do
+                if pm2 show briefly | grep -q "online"; then
+                  # Save PM2 process list
+                  pm2 save
 
-            # If we get here, the process didn't start properly
-            echo "Failed to start process"
-            pm2 logs briefly --lines 50
-            exit 1
+                  # Show status
+                  pm2 status
+                  echo "Deployment successful!"
+                  exit 0
+                fi
+                sleep 5
+              done
+
+              # If we get here, the process didn't start properly
+              echo "Failed to start process"
+              pm2 logs briefly --lines 50
+              exit 1
+            EOF

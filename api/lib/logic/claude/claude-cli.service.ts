@@ -28,7 +28,7 @@ export class ClaudeCliService {
       console.log(`[Claude] Request: ${userRequest}`);
       
       return new Promise((resolve) => {
-        const claude = spawn('claude', ['-p', '--output-format', 'json', '--max-turns', '5', userRequest], {
+        const claude = spawn('claude', ['-p', '--output-format', 'json', '--max-turns', '5', '--dangerously-skip-permissions', userRequest], {
           cwd: path.join(process.cwd(), '..'),
           timeout: 300000, // 5 minutes
         });
