@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
-import { query, type SDKMessage } from '@anthropic-ai/claude-code';
 
 const execAsync = promisify(exec);
 
@@ -32,7 +31,10 @@ export class ClaudeCliService {
       console.log(`[Claude] Starting TypeScript SDK execution at: ${new Date().toISOString()}`);
       console.log(`[Claude] Request: ${userRequest}`);
 
-      const messages: SDKMessage[] = [];
+      // Dynamic import for ES module compatibility
+      const { query } = await import('@anthropic-ai/claude-code');
+      
+      const messages: any[] = [];
       const abortController = new AbortController();
 
       // Set timeout for the operation
