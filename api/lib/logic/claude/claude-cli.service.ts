@@ -208,60 +208,6 @@ export class ClaudeCliService {
       : 'Processing your request...';
   }
 
-  private parseStructuredResponse(content: string, command: string): ClaudeResponse {
-    // Parse structured JSON response from Claude CLI
-    const confirmationPatterns = [
-      /would you like me to/i,
-      /should i proceed/i,
-      /do you want me to/i,
-      /confirm/i,
-      /please approve/i,
-      /review.*and confirm/i,
-      /permission.*required/i,
-    ];
-
-    const needsConfirmation = confirmationPatterns.some((pattern) =>
-      pattern.test(content),
-    );
-
-    if (needsConfirmation) {
-      return {
-        type: 'confirmation',
-        message: this.extractConfirmationMessage(content),
-        needsConfirmation: true,
-        metadata: { command },
-      };
-    }
-
-    const successPatterns = [
-      /✅/,
-      /successfully/i,
-      /completed/i,
-      /created.*issue/i,
-      /pull request.*created/i,
-      /deployed/i,
-      /committed/i,
-    ];
-
-    const isSuccess = successPatterns.some((pattern) => pattern.test(content));
-
-    if (isSuccess) {
-      return {
-        type: 'success',
-        message: this.extractSuccessMessage(content),
-        metadata: {
-          command,
-          ...this.extractMetadata(content),
-        },
-      };
-    }
-
-    return {
-      type: 'information',
-      message: this.extractInformationMessage(content),
-      metadata: { command },
-    };
-  }
 
   private extractMetadata(output: string): any {
     const metadata: any = {};
