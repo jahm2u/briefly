@@ -107,7 +107,7 @@ export class ClaudeCliService {
       if (error.name === 'AbortError') {
         return {
           type: 'error',
-          message: 'Claude operation timed out after 2 minutes',
+          message: 'Claude operation timed out after 5 minutes',
           metadata: { command: 'sdk' },
         };
       }
