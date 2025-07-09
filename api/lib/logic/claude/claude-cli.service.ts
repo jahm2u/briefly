@@ -26,14 +26,18 @@ export class ClaudeCliService {
   ): Promise<ClaudeResponse> {
     try {
       // Execute Claude CLI with the selected command and user request
-      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && claude "/${selection.command}_t ${userRequest}" -p --output-format json --max-turns 10 --verbose`;
+      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && claude "/${selection.command}_t ${userRequest}" -p --output-format json --max-turns 10 --verbose --dangerously-skip-permissions`;
 
       console.log(`[Claude] Executing: ${claudeCommand}`);
+      console.log(`[Claude] Starting execution at: ${new Date().toISOString()}`);
 
       const { stdout, stderr } = await execAsync(claudeCommand, {
-        timeout: 600000, // 10 minutes for complex operations
+        timeout: 120000, // 2 minutes timeout
         maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large outputs
+        killSignal: 'SIGTERM',
       });
+
+      console.log(`[Claude] Execution completed at: ${new Date().toISOString()}`);
 
       // Parse Claude's response and extract important information
       const response = await this.parseClaudeResponse(
