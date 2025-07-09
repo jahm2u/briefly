@@ -10,6 +10,10 @@ import { ConfigService } from './config.service';
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private readonly bot: TelegramBot;
   private messagingService: any; // Will be injected later by MessagingModule
+  private claudeCommandSelector: any; // Will be injected later by MessagingModule
+  private claudeCliService: any; // Will be injected later by MessagingModule
+  private readonly conversationHistory = new Map<number, string[]>();
+  private readonly pendingConfirmations = new Map<number, any>();
 
   constructor(private readonly configService: ConfigService) {
     // Initialize the bot with the token from config
@@ -177,6 +181,110 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         );
       }
     });
+
+    // Command handler for /claude
+    this.bot.onText(/\/claude (.+)/, async (msg, match) => {
+      const chatId = msg.chat.id;
+      const request = match?.[1]?.trim();
+
+      console.log(`[Claude] Received command from chat ${chatId}: ${request}`);
+
+      if (!request) {
+        await this.bot.sendMessage(
+          chatId,
+          '❓ Please provide a request after /claude command.\n\nExample: /claude add user authentication feature'
+        );
+        return;
+      }
+
+      if (!this.claudeCommandSelector || !this.claudeCliService) {
+        await this.bot.sendMessage(
+          chatId,
+          'Claude services are still initializing. Please try again in a moment.'
+        );
+        return;
+      }
+
+      try {
+        // Send "thinking" message
+        console.log(`[Claude] Analyzing request: ${request}`);
+        await this.bot.sendMessage(chatId, '🤖 Analyzing your request...');
+
+        // Select appropriate command
+        const selection = await this.claudeCommandSelector.selectCommand(request);
+        
+        console.log(`[Claude] Command selected: ${selection.command} (${selection.confidence}% confidence)`);
+
+        // Send selection confirmation
+        await this.bot.sendMessage(
+          chatId,
+          `🎯 **Command Selected**: ${selection.command.toUpperCase()}\n` +
+          `💭 **Reasoning**: ${selection.reasoning}\n` +
+          `⚡ **Confidence**: ${selection.confidence}%\n\n` +
+          `🔄 Processing your request...`,
+          { parse_mode: 'Markdown' }
+        );
+
+        // Get conversation history
+        const history = this.conversationHistory.get(chatId) || [];
+        
+        console.log(`[Claude] Executing command with template: ${selection.command}_t.md`);
+
+        // Execute the command
+        const response = await this.claudeCliService.executeCommand(
+          selection,
+          selection.extractedRequest,
+          history
+        );
+
+        console.log(`[Claude] Command execution result: ${response.type}`);
+
+        // Update conversation history
+        history.push(`User: ${request}`);
+        history.push(`Claude: ${response.message}`);
+        this.conversationHistory.set(chatId, history.slice(-10)); // Keep last 10 messages
+
+        // Send response based on type
+        await this.sendClaudeResponse(chatId, response);
+
+      } catch (error) {
+        console.error('[Claude] Error processing request:', error);
+        await this.bot.sendMessage(
+          chatId,
+          `❌ **Error**: ${error.message}\n\nPlease try again or contact support.`,
+          { parse_mode: 'Markdown' }
+        );
+      }
+    });
+
+    // Handle callback queries for Claude confirmations
+    this.bot.on('callback_query', async (callbackQuery) => {
+      const chatId = callbackQuery.message?.chat.id;
+      const data = callbackQuery.data;
+
+      if (!chatId || !data) return;
+
+      console.log(`[Claude] Callback query from chat ${chatId}: ${data}`);
+
+      // Handle confirmation responses
+      if (data.startsWith('confirm_')) {
+        const action = data.substring(8); // Remove 'confirm_' prefix
+        const confirm = action === 'yes';
+        
+        const context = this.pendingConfirmations.get(chatId);
+        if (context) {
+          this.pendingConfirmations.delete(chatId);
+          
+          console.log(`[Claude] Processing confirmation: ${confirm ? 'yes' : 'no'}`);
+          
+          const response = await this.claudeCliService.sendConfirmation(confirm, context);
+          await this.sendClaudeResponse(chatId, response);
+        }
+      }
+
+      // Answer the callback query to remove loading state
+      await this.bot.answerCallbackQuery(callbackQuery.id);
+    });
   }
 
   /**
@@ -184,6 +292,68 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
    */
   setMessagingService(service: any): void {
     this.messagingService = service;
+  }
+
+  /**
+   * Sets the Claude services references - called by MessagingModule
+   */
+  setClaudeServices(commandSelector: any, cliService: any): void {
+    this.claudeCommandSelector = commandSelector;
+    this.claudeCliService = cliService;
+  }
+
+  /**
+   * Sends a Claude response with appropriate formatting and keyboard
+   */
+  private async sendClaudeResponse(chatId: number, response: any): Promise<void> {
+    let message = '';
+    let keyboard: any = null;
+
+    switch (response.type) {
+      case 'confirmation':
+        message = `⚠️ **Confirmation Required**\n\n${response.message}`;
+        keyboard = {
+          inline_keyboard: [
+            [
+              { text: '✅ Yes', callback_data: 'confirm_yes' },
+              { text: '❌ No', callback_data: 'confirm_no' }
+            ]
+          ]
+        };
+        // Store context for confirmation
+        this.pendingConfirmations.set(chatId, response.metadata);
+        break;
+
+      case 'success':
+        message = `✅ **Success**\n\n${response.message}`;
+        if (response.metadata?.pr) {
+          message += `\n\n🔗 **Pull Request**: ${response.metadata.pr}`;
+        }
+        if (response.metadata?.branch) {
+          message += `\n🌿 **Branch**: ${response.metadata.branch}`;
+        }
+        break;
+
+      case 'error':
+        message = `❌ **Error**\n\n${response.message}`;
+        break;
+
+      case 'information':
+      default:
+        message = `ℹ️ **Update**\n\n${response.message}`;
+        break;
+    }
+
+    const messageOptions: any = {
+      parse_mode: 'Markdown',
+      disable_web_page_preview: true,
+    };
+
+    if (keyboard) {
+      messageOptions.reply_markup = keyboard;
+    }
+
+    await this.bot.sendMessage(chatId, message, messageOptions);
   }
 
   /**
