@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@anthropic-ai/claude-code": "^1.0.44",
     "@doist/todoist-api-typescript": "^4.0.4",
     "dotenv": "^16.5.0",
     "ical.js": "^2.0.1"

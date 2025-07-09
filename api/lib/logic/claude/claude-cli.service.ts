@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
+import { query, type SDKMessage } from '@anthropic-ai/claude-code';
 
 const execAsync = promisify(exec);
 
@@ -13,6 +14,11 @@ export interface ClaudeResponse {
     command: string;
     branch?: string;
     pr?: string;
+    issue?: string;
+    commit?: string;
+    sessionId?: string;
+    totalCost?: number;
+    numTurns?: number;
   };
 }
 
@@ -23,38 +29,93 @@ export class ClaudeCliService {
     userRequest: string,
   ): Promise<ClaudeResponse> {
     try {
-      // Execute Claude CLI directly with the user request
-      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && claude "${userRequest}" -p --output-format json --max-turns 5 --dangerously-skip-permissions`;
+      console.log(`[Claude] Starting TypeScript SDK execution at: ${new Date().toISOString()}`);
+      console.log(`[Claude] Request: ${userRequest}`);
 
-      console.log(`[Claude] Executing: ${claudeCommand}`);
-      console.log(`[Claude] Starting execution at: ${new Date().toISOString()}`);
+      const messages: SDKMessage[] = [];
+      const abortController = new AbortController();
 
-      const { stdout, stderr } = await execAsync(claudeCommand, {
-        timeout: 60000, // 1 minute timeout
-        maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large outputs
-        killSignal: 'SIGTERM',
-      });
+      // Set timeout for the operation
+      const timeoutId = setTimeout(() => {
+        abortController.abort();
+      }, 120000); // 2 minutes timeout
+
+      try {
+        // Use TypeScript SDK with proper working directory
+        for await (const message of query({
+          prompt: userRequest,
+          abortController,
+          options: {
+            maxTurns: 5,
+            cwd: path.join(process.cwd(), '..'),
+            permissionMode: 'acceptEdits', // Accept file edits automatically
+          },
+        })) {
+          messages.push(message);
+          console.log(`[Claude] Received message type: ${message.type}`);
+        }
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       console.log(`[Claude] Execution completed at: ${new Date().toISOString()}`);
-      console.log(`[Claude] Raw stdout (${stdout.length} chars):`, stdout);
-      console.log(`[Claude] Raw stderr:`, stderr);
+      console.log(`[Claude] Total messages received: ${messages.length}`);
 
-      // Parse Claude's response and extract important information
-      const response = await this.parseClaudeResponse(
-        stdout,
-        stderr,
-        'direct',
-      );
+      // Extract the final result
+      const resultMessage = messages.find(msg => msg.type === 'result');
+      if (resultMessage && 'result' in resultMessage) {
+        return {
+          type: 'success',
+          message: resultMessage.result,
+          metadata: {
+            command: 'sdk',
+            sessionId: resultMessage.session_id,
+            totalCost: 'total_cost_usd' in resultMessage ? resultMessage.total_cost_usd : undefined,
+            numTurns: 'num_turns' in resultMessage ? resultMessage.num_turns : undefined,
+          },
+        };
+      }
 
-      return response;
-    } catch (error) {
-      console.error('[Claude] Error executing Claude CLI:', error);
+      // If no result message, extract from assistant messages
+      const assistantMessages = messages.filter(msg => msg.type === 'assistant');
+      if (assistantMessages.length > 0) {
+        const lastMessage = assistantMessages[assistantMessages.length - 1];
+        const content = lastMessage.message.content;
+        const textContent = Array.isArray(content) 
+          ? content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+          : typeof content === 'string' ? content : 'Operation completed';
+
+        return {
+          type: 'information',
+          message: textContent,
+          metadata: {
+            command: 'sdk',
+            sessionId: lastMessage.session_id,
+          },
+        };
+      }
+
       return {
         type: 'error',
-        message: `Failed to execute Claude CLI: ${error.message}`,
-        metadata: {
-          command: 'direct',
-        },
+        message: 'No response received from Claude',
+        metadata: { command: 'sdk' },
+      };
+
+    } catch (error) {
+      console.error('[Claude] Error executing Claude SDK:', error);
+      
+      if (error.name === 'AbortError') {
+        return {
+          type: 'error',
+          message: 'Claude operation timed out after 2 minutes',
+          metadata: { command: 'sdk' },
+        };
+      }
+
+      return {
+        type: 'error',
+        message: `Failed to execute Claude SDK: ${error.message}`,
+        metadata: { command: 'sdk' },
       };
     }
   }
@@ -286,35 +347,23 @@ export class ClaudeCliService {
     context?: any,
   ): Promise<ClaudeResponse> {
     try {
-      // Continue the Claude CLI session with the confirmation response
       const response = confirm ? 'yes' : 'no';
-      
       console.log(`[Claude] Sending confirmation: ${response}`);
 
-      // Use continue flag to maintain session state
-      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && echo "${response}" | claude -c -p --output-format json --verbose`;
-      
-      const { stdout, stderr } = await execAsync(claudeCommand, {
-        timeout: 600000, // 10 minutes
-        maxBuffer: 50 * 1024 * 1024, // 50MB
-      });
-
-      if (stderr && stderr.trim()) {
+      // For now, return a simple response since we're using acceptEdits mode
+      if (confirm) {
         return {
-          type: 'error',
-          message: `Confirmation failed: ${stderr.trim()}`,
+          type: 'success',
+          message: 'Confirmed. Changes will be applied automatically.',
+          metadata: context,
+        };
+      } else {
+        return {
+          type: 'information',
+          message: 'Operation cancelled.',
           metadata: context,
         };
       }
-
-      // Parse the response
-      const result = await this.parseClaudeResponse(stdout, stderr, context?.command || 'confirmation');
-      
-      return {
-        ...result,
-        metadata: { ...result.metadata, ...context },
-      };
-      
     } catch (error) {
       console.error('[Claude] Confirmation error:', error);
       return {
