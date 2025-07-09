@@ -91,12 +91,12 @@ function testClaudeReady() {
   });
 }
 
-// Test 4: Simple command
+// Test 4: Simple command with -p flag
 function testSimpleCommand() {
   return new Promise((resolve) => {
-    console.log('\nTest 4: Testing simple Claude command...');
+    console.log('\nTest 4: Testing simple Claude command with -p flag...');
     
-    const claude = spawn('claude', ['what is 2+2?'], {
+    const claude = spawn('claude', ['-p', 'what is 2+2?'], {
       timeout: 30000
     });
     
@@ -118,10 +118,11 @@ function testSimpleCommand() {
     claude.on('close', (code) => {
       console.log(`Process closed with code: ${code}`);
       if (code === 0) {
-        console.log(`✅ Simple command succeeded`);
+        console.log(`✅ Simple -p command succeeded`);
         console.log(`Response length: ${stdout.length} chars`);
+        console.log(`First 200 chars: ${stdout.substring(0, 200)}...`);
       } else {
-        console.log(`❌ Simple command failed (code: ${code})`);
+        console.log(`❌ Simple -p command failed (code: ${code})`);
         console.log(`STDOUT: ${stdout}`);
         console.log(`STDERR: ${stderr}`);
       }
@@ -214,7 +215,7 @@ async function runTests() {
   console.log(`Claude CLI Available: ${results.availability ? '✅' : '❌'}`);
   console.log(`Version Check: ${results.version ? '✅' : '❌'}`);
   console.log(`CLI Ready: ${results.ready ? '✅' : '❌'}`);
-  console.log(`Simple Command: ${results.simple ? '✅' : '❌'}`);
+  console.log(`Simple -p Command: ${results.simple ? '✅' : '❌'}`);
   console.log(`Production Flags: ${results.flags ? '✅' : '❌'}`);
   
   const passCount = Object.values(results).filter(Boolean).length;
