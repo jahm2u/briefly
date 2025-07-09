@@ -28,7 +28,7 @@ export class ClaudeCliService {
       console.log(`[Claude] Request: ${userRequest}`);
       
       return new Promise((resolve) => {
-        const claude = spawn('claude', ['-p', '--output-format', 'json', '--max-turns', '5', '--dangerously-skip-permissions', userRequest], {
+        const claude = spawn('claude', ['-p', '--max-turns', '5', '--dangerously-skip-permissions', userRequest], {
           cwd: path.join(process.cwd(), '..'),
           timeout: 300000, // 5 minutes
         });
@@ -96,16 +96,8 @@ export class ClaudeCliService {
       };
     }
 
-    // Try to parse JSON output first (from --output-format json)
-    try {
-      const jsonOutput = JSON.parse(stdout);
-      if (jsonOutput.content) {
-        return this.parseStructuredResponse(jsonOutput.content, command);
-      }
-    } catch (e) {
-      // Not JSON, continue with text parsing
-      console.log('[Claude] Output not in JSON format, parsing as text');
-    }
+    // Since we're not using --output-format json, parse as text
+    console.log('[Claude] Parsing text output from Claude CLI');
 
     // Look for confirmation requests
     const confirmationPatterns = [
