@@ -38,26 +38,26 @@ jobs:
             fi
 
             # Backup current .env file
-            cp .env .env.backup || true
+            cp .env .env.backup
 
             # Pull latest changes
             git pull origin main
 
             # Restore .env file
-            cp .env.backup .env || true
-            rm .env.backup 2>/dev/null || true
+            cp .env.backup .env
+            rm .env.backup
 
-            # Navigate to api directory for build
+            # Navigate to api directory
             cd api
 
             # Install dependencies
             npm install
 
-            # Build the application
+            # Build the NestJS application
             npm run build
 
             # Start the PM2 process with specific port
-            PORT=5100 pm2 start dist/main.js --name briefly
+            PORT=5100 pm2 start dist/src/main.js --name briefly
 
             # Wait for process to start and verify it's running
             for i in {1..12}; do
