@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
@@ -22,18 +22,40 @@ export interface ClaudeResponse {
 }
 
 @Injectable()
-export class ClaudeCliService {
+export class ClaudeCliService implements OnModuleInit {
+  private readonly logger = new Logger(ClaudeCliService.name);
+  private claudeQuery: any = null;
+
+  // NestJS will call this method once the module has been initialized
+  async onModuleInit() {
+    try {
+      this.logger.log('Initializing Claude SDK...');
+      
+      // Dynamic import for ES module compatibility
+      const claudeModule = await import('@anthropic-ai/claude-code');
+      this.claudeQuery = claudeModule.query;
+      
+      this.logger.log('Claude SDK initialized successfully');
+    } catch (error) {
+      this.logger.error('Failed to initialize Claude SDK', error);
+      // Don't throw - allow app to start but log the error
+      // The executeCommand method will handle the case where claudeQuery is null
+    }
+  }
 
   async executeCommand(
     userRequest: string,
   ): Promise<ClaudeResponse> {
     try {
+      // Check if SDK is available
+      if (!this.claudeQuery) {
+        this.logger.error('Claude SDK not available - falling back to CLI');
+        return await this.executeWithCLI(userRequest);
+      }
+
       console.log(`[Claude] Starting TypeScript SDK execution at: ${new Date().toISOString()}`);
       console.log(`[Claude] Request: ${userRequest}`);
 
-      // Dynamic import for ES module compatibility
-      const { query } = await import('@anthropic-ai/claude-code');
-      
       const messages: any[] = [];
       const abortController = new AbortController();
 
@@ -44,7 +66,7 @@ export class ClaudeCliService {
 
       try {
         // Use TypeScript SDK with proper working directory
-        for await (const message of query({
+        for await (const message of this.claudeQuery({
           prompt: userRequest,
           abortController,
           options: {
@@ -114,10 +136,62 @@ export class ClaudeCliService {
         };
       }
 
+      // If SDK fails, fall back to CLI
+      this.logger.warn('Claude SDK failed, falling back to CLI');
+      return await this.executeWithCLI(userRequest);
+    }
+  }
+
+  // Fallback CLI implementation with proper security
+  private async executeWithCLI(userRequest: string): Promise<ClaudeResponse> {
+    try {
+      console.log(`[Claude] Executing CLI fallback at: ${new Date().toISOString()}`);
+      
+      // Use spawn instead of exec to avoid command injection
+      const { spawn } = require('child_process');
+      
+      return new Promise((resolve, reject) => {
+        const claude = spawn('claude', ['-p', '--output-format', 'json', '--max-turns', '5', userRequest], {
+          cwd: path.join(process.cwd(), '..'),
+          timeout: 300000, // 5 minutes
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        claude.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        claude.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        claude.on('close', (code) => {
+          if (code === 0) {
+            resolve(this.parseClaudeResponse(stdout, stderr, 'cli'));
+          } else {
+            resolve({
+              type: 'error',
+              message: `Claude CLI exited with code ${code}: ${stderr}`,
+              metadata: { command: 'cli' },
+            });
+          }
+        });
+
+        claude.on('error', (error) => {
+          resolve({
+            type: 'error',
+            message: `CLI execution failed: ${error.message}`,
+            metadata: { command: 'cli' },
+          });
+        });
+      });
+    } catch (error) {
       return {
         type: 'error',
-        message: `Failed to execute Claude SDK: ${error.message}`,
-        metadata: { command: 'sdk' },
+        message: `CLI fallback failed: ${error.message}`,
+        metadata: { command: 'cli' },
       };
     }
   }
