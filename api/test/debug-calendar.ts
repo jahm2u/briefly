@@ -80,38 +80,41 @@ async function debugCalendarEvents() {
 
     try {
       console.log('Fetching calendar data...');
-      
+
       // Fetch iCal data using fetch
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const icalData = await response.text();
-      
+
       // Parse with ical.js
       const jcalData = ICAL.parse(icalData);
       const comp = new ICAL.Component(jcalData);
-      
+
       // Get all VEVENT components
       const vevents = comp.getAllSubcomponents('vevent');
       console.log('✅ Successfully fetched calendar data');
 
       // Convert VEVENT components to a more usable format
-      const allEvents = vevents.map((vevent) => {
-        try {
-          const dtstart = vevent.getFirstPropertyValue('dtstart');
-          const summary = vevent.getFirstPropertyValue('summary') || 'Untitled Event';
-          
-          return {
-            summary,
-            start: dtstart ? dtstart.toJSDate() : new Date(),
-          };
-        } catch (error) {
-          console.warn(`Failed to parse event: ${error.message}`);
-          return null;
-        }
-      }).filter(event => event !== null);
+      const allEvents = vevents
+        .map((vevent) => {
+          try {
+            const dtstart = vevent.getFirstPropertyValue('dtstart');
+            const summary =
+              vevent.getFirstPropertyValue('summary') || 'Untitled Event';
+
+            return {
+              summary,
+              start: dtstart ? dtstart.toJSDate() : new Date(),
+            };
+          } catch (error) {
+            console.warn(`Failed to parse event: ${error.message}`);
+            return null;
+          }
+        })
+        .filter((event) => event !== null);
 
       console.log(`Found ${allEvents.length} total events in the calendar`);
 

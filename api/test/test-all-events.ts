@@ -23,51 +23,69 @@ async function testAllEvents() {
 
   // Create the iCal service
   const icalService = new ICalService(configService);
-  
+
   // Override the logger
   (icalService as any).logger = mockLogger;
 
   console.log('=== Testing Calendar Events ===\n');
-  
+
   try {
-    console.log('Fetching today\'s events...');
+    console.log("Fetching today's events...");
     const events = await icalService.getTodayEvents();
-    
+
     console.log(`\nFound ${events.length} events for today\n`);
-    
+
     if (events.length === 0) {
       console.log('No events found. Let me check the filtering...\n');
-      
+
       // Call the private fetchEvents method to see all events
       const allEvents = await (icalService as any).fetchEvents();
       console.log(`Total events in calendar: ${allEvents.length}`);
-      
+
       // Show some recent events
       const now = new Date();
       const recentEvents = allEvents.filter((event: any) => {
-        const daysDiff = Math.abs((event.startTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const daysDiff = Math.abs(
+          (event.startTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
         return daysDiff < 7; // Events within 7 days
       });
-      
+
       console.log(`\nEvents within 7 days: ${recentEvents.length}`);
       recentEvents.slice(0, 10).forEach((event: any, index: number) => {
         console.log(`\nEvent ${index + 1}: ${event.summary}`);
         console.log(`  Start (UTC): ${event.startTime.toISOString()}`);
-        console.log(`  Start (BRT): ${event.startTime.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`);
-        console.log(`  End (BRT): ${event.endTime.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`);
-        
+        console.log(
+          `  Start (BRT): ${event.startTime.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`,
+        );
+        console.log(
+          `  End (BRT): ${event.endTime.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`,
+        );
+
         // Check if it should be today
-        const eventDateBRT = event.startTime.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-        const todayBRT = now.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-        console.log(`  Event date (BRT): ${eventDateBRT}, Today (BRT): ${todayBRT}`);
-        console.log(`  Should be today? ${eventDateBRT === todayBRT ? 'YES' : 'NO'}`);
+        const eventDateBRT = event.startTime.toLocaleDateString('en-CA', {
+          timeZone: 'America/Sao_Paulo',
+        });
+        const todayBRT = now.toLocaleDateString('en-CA', {
+          timeZone: 'America/Sao_Paulo',
+        });
+        console.log(
+          `  Event date (BRT): ${eventDateBRT}, Today (BRT): ${todayBRT}`,
+        );
+        console.log(
+          `  Should be today? ${eventDateBRT === todayBRT ? 'YES' : 'NO'}`,
+        );
       });
     } else {
       events.forEach((event, index) => {
         console.log(`Event ${index + 1}: ${event.summary}`);
         console.log(`  Start (UTC): ${event.startTime.toISOString()}`);
-        console.log(`  Start (BRT): ${event.startTime.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`);
-        console.log(`  End (BRT): ${event.endTime.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`);
+        console.log(
+          `  Start (BRT): ${event.startTime.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`,
+        );
+        console.log(
+          `  End (BRT): ${event.endTime.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`,
+        );
         console.log(`  Formatted: ${event.formatForMessage()}`);
         console.log('');
       });

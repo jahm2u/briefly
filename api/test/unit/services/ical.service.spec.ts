@@ -199,8 +199,13 @@ describe('ICalService', () => {
         getFirstPropertyValue: jest.fn((prop) => {
           if (prop === 'uid') return 'event1';
           if (prop === 'summary') return 'Event 1';
-          if (prop === 'dtstart') return { toJSDate: () => new Date('2023-01-15T09:00:00Z'), isDate: false };
-          if (prop === 'dtend') return { toJSDate: () => new Date('2023-01-15T10:00:00Z') };
+          if (prop === 'dtstart')
+            return {
+              toJSDate: () => new Date('2023-01-15T09:00:00Z'),
+              isDate: false,
+            };
+          if (prop === 'dtend')
+            return { toJSDate: () => new Date('2023-01-15T10:00:00Z') };
           return null;
         }),
         hasProperty: jest.fn(() => false),
@@ -210,8 +215,13 @@ describe('ICalService', () => {
         getFirstPropertyValue: jest.fn((prop) => {
           if (prop === 'uid') return 'event2';
           if (prop === 'summary') return 'Event 2';
-          if (prop === 'dtstart') return { toJSDate: () => new Date('2023-01-15T14:00:00Z'), isDate: false };
-          if (prop === 'dtend') return { toJSDate: () => new Date('2023-01-15T15:00:00Z') };
+          if (prop === 'dtstart')
+            return {
+              toJSDate: () => new Date('2023-01-15T14:00:00Z'),
+              isDate: false,
+            };
+          if (prop === 'dtend')
+            return { toJSDate: () => new Date('2023-01-15T15:00:00Z') };
           return null;
         }),
         hasProperty: jest.fn(() => false),
@@ -220,13 +230,13 @@ describe('ICalService', () => {
       const mockComponent1 = {
         getAllSubcomponents: jest.fn(() => [mockVEvent1]),
       };
-      
+
       const mockComponent2 = {
         getAllSubcomponents: jest.fn(() => [mockVEvent2]),
       };
 
       mockICAL.parse.mockReturnValue(['vcalendar', [], []]);
-      
+
       // Mock Component constructor to return different components for different calls
       let componentCallCount = 0;
       mockICAL.Component.mockImplementation(() => {
@@ -241,8 +251,12 @@ describe('ICalService', () => {
       const events = await service['fetchEvents']();
 
       expect(global.fetch).toHaveBeenCalledTimes(2);
-      expect(global.fetch).toHaveBeenCalledWith('https://example.com/calendar1.ics');
-      expect(global.fetch).toHaveBeenCalledWith('https://example.com/calendar2.ics');
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.com/calendar1.ics',
+      );
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.com/calendar2.ics',
+      );
 
       expect(events).toHaveLength(2);
       expect(events[0]).toBeInstanceOf(CalendarEvent);
@@ -262,7 +276,8 @@ describe('ICalService', () => {
         if (url === 'https://example.com/calendar1.ics') {
           return Promise.resolve({
             ok: true,
-            text: () => Promise.resolve('BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR'),
+            text: () =>
+              Promise.resolve('BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR'),
           });
         } else {
           return Promise.resolve({
@@ -278,8 +293,13 @@ describe('ICalService', () => {
         getFirstPropertyValue: jest.fn((prop) => {
           if (prop === 'uid') return 'event1';
           if (prop === 'summary') return 'Event 1';
-          if (prop === 'dtstart') return { toJSDate: () => new Date('2023-01-15T09:00:00Z'), isDate: false };
-          if (prop === 'dtend') return { toJSDate: () => new Date('2023-01-15T10:00:00Z') };
+          if (prop === 'dtstart')
+            return {
+              toJSDate: () => new Date('2023-01-15T09:00:00Z'),
+              isDate: false,
+            };
+          if (prop === 'dtend')
+            return { toJSDate: () => new Date('2023-01-15T10:00:00Z') };
           return null;
         }),
         hasProperty: jest.fn(() => false),

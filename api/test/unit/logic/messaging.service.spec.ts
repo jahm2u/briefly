@@ -24,7 +24,7 @@ describe('MessagingService', () => {
   beforeEach(async () => {
     // Clear all mocks
     jest.clearAllMocks();
-    
+
     // Create a mock for ConfigService
     const configServiceMock = {
       getOpenAiApiKey: jest.fn().mockReturnValue('mock-openai-key'),
@@ -39,7 +39,7 @@ describe('MessagingService', () => {
         },
       },
     };
-    
+
     (OpenAI as unknown as jest.Mock).mockImplementation(() => openAiMock);
 
     // Create proper mocks for GroupingService
@@ -126,7 +126,7 @@ describe('MessagingService', () => {
           endTime: new Date('2023-01-15T15:00:00Z'),
         }),
       ];
-      
+
       // Sample tasks
       const allTasks = [
         new Task({
@@ -151,35 +151,40 @@ describe('MessagingService', () => {
           createdAt: new Date('2023-01-14T15:00:00Z'),
         }),
       ];
-      
+
       // Mock GroupingService responses
       const mockGroupTasks = groupingService.groupTasks as jest.Mock;
       mockGroupTasks.mockResolvedValue({
-        'Product': [allTasks[1]], // Evaluate latest UX feedback task
-        'Operational': [allTasks[2]], // Follow up on billing task
-        'Strategic': [allTasks[0]], // Review pricing strategy task
+        Product: [allTasks[1]], // Evaluate latest UX feedback task
+        Operational: [allTasks[2]], // Follow up on billing task
+        Strategic: [allTasks[0]], // Review pricing strategy task
       });
 
       // Since formatMorningMessage is private, we need to test via sendMorningMessage
       // Mock the dependencies for sendMorningMessage
-      jest.spyOn(icalService, 'getTodayEvents').mockResolvedValue(calendarEvents);
-      jest.spyOn(todoistService, 'getRelevantTasks').mockResolvedValue(allTasks);
+      jest
+        .spyOn(icalService, 'getTodayEvents')
+        .mockResolvedValue(calendarEvents);
+      jest
+        .spyOn(todoistService, 'getRelevantTasks')
+        .mockResolvedValue(allTasks);
       jest.spyOn(telegramService, 'sendMessage').mockResolvedValue();
-      
+
       // Call sendMorningMessage and capture the message sent to Telegram
       await service.sendMorningMessage();
-      
+
       // Get the captured message from the mock
-      const result = (telegramService.sendMessage as jest.Mock).mock.calls[0][0] as string;
-      
+      const result = (telegramService.sendMessage as jest.Mock).mock
+        .calls[0][0] as string;
+
       // Verify GroupingService was called correctly
       expect(mockGroupTasks).toHaveBeenCalledWith(allTasks);
-      
+
       expect(result).toContain('Good Morning');
       expect(result).toContain('Calendar');
       expect(result).toContain('Team Daily Standup');
       expect(result).toContain('Strategic Roadmap Discussion');
-      expect(result).toContain('Today\'s Focus');
+      expect(result).toContain("Today's Focus");
       expect(result).toContain('Product');
       expect(result).toContain('Evaluate latest UX feedback from users');
       expect(result).toContain('[View Task](https://todoist.com/task/2)');
@@ -199,24 +204,27 @@ describe('MessagingService', () => {
           createdAt: new Date('2023-01-15T07:00:00Z'),
         }),
       ];
-      
+
       // Mock GroupingService responses
       const mockGroupTasks = groupingService.groupTasks as jest.Mock;
       mockGroupTasks.mockResolvedValue({
-        'Work': [allTasks[0]], // Review updated pricing strategy proposal
+        Work: [allTasks[0]], // Review updated pricing strategy proposal
       });
 
       // Since formatMorningMessage is private, we need to test via sendMorningMessage
       jest.spyOn(icalService, 'getTodayEvents').mockResolvedValue([]);
-      jest.spyOn(todoistService, 'getRelevantTasks').mockResolvedValue(allTasks);
+      jest
+        .spyOn(todoistService, 'getRelevantTasks')
+        .mockResolvedValue(allTasks);
       jest.spyOn(telegramService, 'sendMessage').mockResolvedValue();
-      
+
       await service.sendMorningMessage();
-      const result = (telegramService.sendMessage as jest.Mock).mock.calls[0][0] as string;
-      
+      const result = (telegramService.sendMessage as jest.Mock).mock
+        .calls[0][0] as string;
+
       expect(result).toContain('Good Morning');
       expect(result).toContain('No meetings scheduled for today');
-      expect(result).toContain('Today\'s Focus');
+      expect(result).toContain("Today's Focus");
       expect(result).toContain('Review updated pricing strategy proposal');
       expect(result).toContain('[View Task](https://todoist.com/task/1)');
     });
@@ -231,7 +239,7 @@ describe('MessagingService', () => {
           endTime: new Date('2023-01-15T09:30:00Z'),
         }),
       ];
-      
+
       // Sample tasks
       const allTasks = [
         new Task({
@@ -242,25 +250,30 @@ describe('MessagingService', () => {
           createdAt: new Date('2023-01-14T07:00:00Z'),
         }),
       ];
-      
+
       // Mock GroupingService responses
       const mockGroupTasks = groupingService.groupTasks as jest.Mock;
       mockGroupTasks.mockResolvedValue({
-        'Work': [allTasks[0]], // Existing task
+        Work: [allTasks[0]], // Existing task
       });
 
       // Since formatMorningMessage is private, we need to test via sendMorningMessage
-      jest.spyOn(icalService, 'getTodayEvents').mockResolvedValue(calendarEvents);
-      jest.spyOn(todoistService, 'getRelevantTasks').mockResolvedValue(allTasks);
+      jest
+        .spyOn(icalService, 'getTodayEvents')
+        .mockResolvedValue(calendarEvents);
+      jest
+        .spyOn(todoistService, 'getRelevantTasks')
+        .mockResolvedValue(allTasks);
       jest.spyOn(telegramService, 'sendMessage').mockResolvedValue();
-      
+
       await service.sendMorningMessage();
-      const result = (telegramService.sendMessage as jest.Mock).mock.calls[0][0] as string;
-      
+      const result = (telegramService.sendMessage as jest.Mock).mock
+        .calls[0][0] as string;
+
       expect(result).toContain('Good Morning');
       expect(result).toContain('Calendar');
       expect(result).toContain('Team Daily Standup');
-      expect(result).toContain('Today\'s Focus');
+      expect(result).toContain("Today's Focus");
       expect(result).toContain('Work');
       expect(result).toContain('Existing task');
       expect(result).toContain('[View Task](https://todoist.com/task/1)');
@@ -278,7 +291,7 @@ describe('MessagingService', () => {
           isCompleted: true,
         }),
       ];
-      
+
       // Sample remaining tasks
       const remainingTasks = [
         new Task({
@@ -292,36 +305,40 @@ describe('MessagingService', () => {
           url: 'https://todoist.com/task/4',
         }),
       ];
-      
+
       // Mock GroupingService response for remaining tasks
       const mockGroupTasks = groupingService.groupTasks as jest.Mock;
       mockGroupTasks.mockResolvedValue({
-        'Priority': [remainingTasks[0]], // Finalize quarterly report
-        'Communication': [remainingTasks[1]], // Follow up with marketing team
+        Priority: [remainingTasks[0]], // Finalize quarterly report
+        Communication: [remainingTasks[1]], // Follow up with marketing team
       });
-      
+
       // Mock motivation message from OpenAI
       const mockMotivationResponse = {
         choices: [
           {
             message: {
-              content: 'Great job completing your presentation! Your productivity is setting you up for success.',
+              content:
+                'Great job completing your presentation! Your productivity is setting you up for success.',
             },
           },
         ],
       };
-      
+
       mockOpenAICreate.mockResolvedValue(mockMotivationResponse as any);
-      
-      const result = await service.formatAfternoonMessage(completedTasks, remainingTasks);
-      
+
+      const result = await service.formatAfternoonMessage(
+        completedTasks,
+        remainingTasks,
+      );
+
       // Check that GroupingService was called for remaining tasks only
       expect(mockGroupTasks).toHaveBeenCalledTimes(1);
       expect(mockGroupTasks).toHaveBeenCalledWith(remainingTasks);
-      
+
       // Check that OpenAI was called for motivation message
       expect(mockOpenAICreate).toHaveBeenCalledTimes(1);
-      
+
       expect(result).toContain('Afternoon Update');
       expect(result).toContain('Completed');
       expect(result).toContain('Complete presentation for tomorrow');
@@ -336,7 +353,7 @@ describe('MessagingService', () => {
     it('should handle no completed tasks', async () => {
       // Empty completed tasks
       const completedTasks: Task[] = [];
-      
+
       // Sample remaining tasks
       const remainingTasks = [
         new Task({
@@ -345,15 +362,18 @@ describe('MessagingService', () => {
           url: 'https://todoist.com/task/2',
         }),
       ];
-      
+
       // Mock GroupingService response for remaining tasks
       const mockGroupTasks = groupingService.groupTasks as jest.Mock;
       mockGroupTasks.mockResolvedValue({
-        'Work': [remainingTasks[0]], // Finalize quarterly report
+        Work: [remainingTasks[0]], // Finalize quarterly report
       });
-      
-      const result = await service.formatAfternoonMessage(completedTasks, remainingTasks);
-      
+
+      const result = await service.formatAfternoonMessage(
+        completedTasks,
+        remainingTasks,
+      );
+
       expect(result).toContain('Afternoon Update');
       expect(result).toContain('Nothing completed yet');
       expect(result).toContain('Remaining');
@@ -386,7 +406,7 @@ describe('MessagingService', () => {
       const inboxTasks = [
         new Task({
           id: '3',
-          content: 'Plan agenda for tomorrow\'s meeting',
+          content: "Plan agenda for tomorrow's meeting",
           url: 'https://todoist.com/task/3',
           projectId: null, // In inbox
         }),
@@ -397,12 +417,12 @@ describe('MessagingService', () => {
           projectId: null, // In inbox
         }),
       ];
-      
+
       // Mock GroupingService response
       const mockGroupTasks = groupingService.groupTasks as jest.Mock;
       mockGroupTasks.mockResolvedValue({
-        'Planning': [inboxTasks[0]], // Plan agenda for tomorrow's meeting
-        'Review': [inboxTasks[1]], // Review marketing materials
+        Planning: [inboxTasks[0]], // Plan agenda for tomorrow's meeting
+        Review: [inboxTasks[1]], // Review marketing materials
       });
 
       // Mock evening reflection from OpenAI
@@ -410,18 +430,22 @@ describe('MessagingService', () => {
         choices: [
           {
             message: {
-              content: 'Great progress on key tasks today - tomorrow brings fresh opportunities to tackle your inbox items.',
+              content:
+                'Great progress on key tasks today - tomorrow brings fresh opportunities to tackle your inbox items.',
             },
           },
         ],
       };
-      
+
       mockOpenAICreate.mockResolvedValue(mockReflectionResponse as any);
-      
-      const result = await service.formatEveningMessage(completedTasks, inboxTasks);
-      
+
+      const result = await service.formatEveningMessage(
+        completedTasks,
+        inboxTasks,
+      );
+
       expect(mockGroupTasks).toHaveBeenCalledWith(inboxTasks);
-      
+
       // Check that OpenAI was called for evening reflection
       expect(mockOpenAICreate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -431,16 +455,16 @@ describe('MessagingService', () => {
               content: expect.stringContaining('Completed tasks today:'),
             }),
           ]),
-        })
+        }),
       );
-      
+
       expect(result).toContain('Evening Check');
       expect(result).toContain('Completed Today');
       expect(result).toContain('Complete presentation for tomorrow');
       expect(result).toContain('Check emails');
       expect(result).toContain('Inbox Triage');
       expect(result).toContain('Planning');
-      expect(result).toContain('Plan agenda for tomorrow\'s meeting');
+      expect(result).toContain("Plan agenda for tomorrow's meeting");
       expect(result).toContain('Review');
       expect(result).toContain('Review marketing materials');
       expect(result).toContain('Great progress on key tasks today');
@@ -456,16 +480,20 @@ describe('MessagingService', () => {
         choices: [
           {
             message: {
-              content: 'Sometimes rest is the most productive thing you can do - recharge for tomorrow.',
+              content:
+                'Sometimes rest is the most productive thing you can do - recharge for tomorrow.',
             },
           },
         ],
       };
-      
+
       mockOpenAICreate.mockResolvedValue(mockReflectionResponse as any);
-      
-      const result = await service.formatEveningMessage(completedTasks, inboxTasks);
-      
+
+      const result = await service.formatEveningMessage(
+        completedTasks,
+        inboxTasks,
+      );
+
       // Should not call GroupingService for empty inbox list
       expect(groupingService.groupTasks).not.toHaveBeenCalled();
 
@@ -478,9 +506,9 @@ describe('MessagingService', () => {
               content: expect.stringContaining('No tasks completed today'),
             }),
           ]),
-        })
+        }),
       );
-      
+
       expect(result).toContain('Evening Check');
       expect(result).toContain('Nothing completed today');
       expect(result).toContain('Inbox is empty');

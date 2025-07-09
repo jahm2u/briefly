@@ -126,19 +126,19 @@ async function testICalConnection() {
 
     for (const url of urls) {
       console.log(`\nTesting URL: ${url}`);
-      
+
       // Fetch iCal data using fetch instead of node-ical
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const icalData = await response.text();
-      
+
       // Parse with ical.js
       const jcalData = ICAL.parse(icalData);
       const comp = new ICAL.Component(jcalData);
-      
+
       // Get all VEVENT components
       const vevents = comp.getAllSubcomponents('vevent');
       console.log(`✅ Successfully connected to iCal URL`);
@@ -150,7 +150,7 @@ async function testICalConnection() {
         try {
           const dtstart = vevent.getFirstPropertyValue('dtstart');
           if (!dtstart) return false;
-          
+
           const eventDate = dtstart.toJSDate();
           return (
             eventDate.getFullYear() === today.getFullYear() &&
@@ -171,8 +171,9 @@ async function testICalConnection() {
         todayEvents.forEach((vevent, index) => {
           try {
             const dtstart = vevent.getFirstPropertyValue('dtstart');
-            const summary = vevent.getFirstPropertyValue('summary') || 'Untitled Event';
-            
+            const summary =
+              vevent.getFirstPropertyValue('summary') || 'Untitled Event';
+
             if (dtstart) {
               const start = dtstart.toJSDate();
               const hours = String(start.getHours()).padStart(2, '0');

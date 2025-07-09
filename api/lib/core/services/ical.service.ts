@@ -22,18 +22,24 @@ export class ICalService {
     try {
       const allEvents = await this.fetchEvents();
       this.logger.log(`Fetched ${allEvents.length} total calendar events`);
-      
+
       // Log all events before filtering
-      allEvents.forEach(event => {
-        this.logger.debug(`Event before filter: "${event.summary}" on ${event.startTime.toISOString()}`);
+      allEvents.forEach((event) => {
+        this.logger.debug(
+          `Event before filter: "${event.summary}" on ${event.startTime.toISOString()}`,
+        );
       });
-      
-      const relevantEvents = allEvents.filter(event => this.isRelevantEvent(event));
-      this.logger.log(`After filtering: ${relevantEvents.length} events are relevant for today`);
-      
+
+      const relevantEvents = allEvents.filter((event) =>
+        this.isRelevantEvent(event),
+      );
+      this.logger.log(
+        `After filtering: ${relevantEvents.length} events are relevant for today`,
+      );
+
       // Sort events by start time
-      return relevantEvents.sort((a, b) => 
-        a.startTime.getTime() - b.startTime.getTime()
+      return relevantEvents.sort(
+        (a, b) => a.startTime.getTime() - b.startTime.getTime(),
       );
     } catch (error) {
       throw new Error(`Failed to fetch calendar events: ${error.message}`);
@@ -58,23 +64,25 @@ export class ICalService {
     for (const url of urls) {
       try {
         this.logger.debug(`Fetching calendar from: ${url}`);
-        
+
         // Fetch iCal data
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const icalData = await response.text();
-        
+
         // Parse with ical.js
         const jcalData = ICAL.parse(icalData);
         const comp = new ICAL.Component(jcalData);
-        
+
         // Process each VEVENT
         const vevents = comp.getAllSubcomponents('vevent');
-        this.logger.debug(`Found ${vevents.length} VEVENT components in calendar`);
-        
+        this.logger.debug(
+          `Found ${vevents.length} VEVENT components in calendar`,
+        );
+
         for (const vevent of vevents) {
           try {
             const event = new ICAL.Event(vevent);
@@ -82,7 +90,9 @@ export class ICalService {
             // Exceptions are handled by their master event's iterator.
             // We must skip them here to avoid processing them as standalone events.
             if (event.isRecurrenceException()) {
-              this.logger.debug(`Skipping recurrence exception for UID: ${event.uid} with Recurrence-ID: ${event.recurrenceId.toString()}`);
+              this.logger.debug(
+                `Skipping recurrence exception for UID: ${event.uid} with Recurrence-ID: ${event.recurrenceId.toString()}`,
+              );
               continue;
             }
 
@@ -91,7 +101,11 @@ export class ICalService {
 
             if (event.isRecurring()) {
               this.logger.debug(`Event "${summary}" is recurring`);
-              const recurringEvents = this.expandRecurringEvent(event, rangeStart, rangeEnd);
+              const recurringEvents = this.expandRecurringEvent(
+                event,
+                rangeStart,
+                rangeEnd,
+              );
               events.push(...recurringEvents);
             } else {
               // Handle single, non-recurring events
@@ -99,21 +113,32 @@ export class ICalService {
               if (singleEvent) {
                 // Only include single events that fall within our processing range
                 const startTime = singleEvent.startTime.getTime();
-                if (startTime >= rangeStart.getTime() && startTime <= rangeEnd.getTime()) {
-                  this.logger.debug(`Created single event: ${singleEvent.summary} on ${singleEvent.startTime.toISOString()}`);
+                if (
+                  startTime >= rangeStart.getTime() &&
+                  startTime <= rangeEnd.getTime()
+                ) {
+                  this.logger.debug(
+                    `Created single event: ${singleEvent.summary} on ${singleEvent.startTime.toISOString()}`,
+                  );
                   events.push(singleEvent);
                 }
               }
             }
           } catch (eventError) {
-            this.logger.warn(`Failed to process individual event component: ${eventError.message}`);
+            this.logger.warn(
+              `Failed to process individual event component: ${eventError.message}`,
+            );
           }
         }
-        
-        this.logger.debug(`Processed ${events.length} total events from ${url}`);
+
+        this.logger.debug(
+          `Processed ${events.length} total events from ${url}`,
+        );
       } catch (error) {
         // Log error but continue with other URLs
-        this.logger.error(`Failed to fetch iCal data from ${url}: ${error.message}`);
+        this.logger.error(
+          `Failed to fetch iCal data from ${url}: ${error.message}`,
+        );
       }
     }
 
@@ -126,7 +151,11 @@ export class ICalService {
    * handles exceptions (RECURRENCE-ID) and cancellations (EXDATE).
    * @private
    */
-  private expandRecurringEvent(event: any, rangeStart: Date, rangeEnd: Date): CalendarEvent[] {
+  private expandRecurringEvent(
+    event: any,
+    rangeStart: Date,
+    rangeEnd: Date,
+  ): CalendarEvent[] {
     const events: CalendarEvent[] = [];
     const summary = event.summary || 'Untitled';
 
@@ -151,7 +180,8 @@ export class ICalService {
         // If the occurrence is within our target range, create an event for it
         if (occurrence.compare(icalRangeStart) >= 0) {
           const details = event.getOccurrenceDetails(occurrence);
-          const eventForOccurrence = this.createCalendarEventFromOccurrenceDetails(details);
+          const eventForOccurrence =
+            this.createCalendarEventFromOccurrenceDetails(details);
           if (eventForOccurrence) {
             events.push(eventForOccurrence);
           }
@@ -159,12 +189,18 @@ export class ICalService {
       }
 
       if (iterationCount >= maxIterations) {
-        this.logger.warn(`Recurring event expansion hit iteration limit for: ${summary}`);
+        this.logger.warn(
+          `Recurring event expansion hit iteration limit for: ${summary}`,
+        );
       }
 
-      this.logger.debug(`Expanded recurring event "${summary}" into ${events.length} occurrences`);
+      this.logger.debug(
+        `Expanded recurring event "${summary}" into ${events.length} occurrences`,
+      );
     } catch (error) {
-      this.logger.warn(`Failed to expand recurring event "${summary}": ${error.message}`);
+      this.logger.warn(
+        `Failed to expand recurring event "${summary}": ${error.message}`,
+      );
     }
 
     return events;
@@ -175,7 +211,9 @@ export class ICalService {
    * This uses the details object which contains any modifications from a RECURRENCE-ID.
    * @private
    */
-  private createCalendarEventFromOccurrenceDetails(details: any): CalendarEvent | null {
+  private createCalendarEventFromOccurrenceDetails(
+    details: any,
+  ): CalendarEvent | null {
     try {
       const item = details.item; // This is an ICAL.Event for the specific occurrence
 
@@ -192,7 +230,9 @@ export class ICalService {
         isAllDay: details.startDate.isDate || false,
       });
     } catch (error) {
-      this.logger.warn(`Failed to create CalendarEvent from occurrence: ${error.message}`);
+      this.logger.warn(
+        `Failed to create CalendarEvent from occurrence: ${error.message}`,
+      );
       return null;
     }
   }
@@ -214,7 +254,9 @@ export class ICalService {
         isAllDay: event.startDate.isDate || false,
       });
     } catch (error) {
-      this.logger.warn(`Failed to create CalendarEvent from ICAL.Event: ${error.message}`);
+      this.logger.warn(
+        `Failed to create CalendarEvent from ICAL.Event: ${error.message}`,
+      );
       return null;
     }
   }
@@ -240,14 +282,18 @@ export class ICalService {
    */
   private isRelevantEvent(event: CalendarEvent): boolean {
     const targetTimeZone = 'America/Sao_Paulo';
-    
+
     // Define "today" in the target timezone - now using container time which should be BRT
     const nowInBrt = DateTime.now().setZone(targetTimeZone);
     const todayStart = nowInBrt.startOf('day');
     const todayEnd = nowInBrt.endOf('day');
 
-    this.logger.debug(`Container time: ${new Date().toISOString()}, BRT time: ${nowInBrt.toISO()}`);
-    this.logger.debug(`Today range (BRT): ${todayStart.toISO()} to ${todayEnd.toISO()}`);
+    this.logger.debug(
+      `Container time: ${new Date().toISOString()}, BRT time: ${nowInBrt.toISO()}`,
+    );
+    this.logger.debug(
+      `Today range (BRT): ${todayStart.toISO()} to ${todayEnd.toISO()}`,
+    );
 
     // Represent event times in Luxon's DateTime object for reliable comparison
     const eventStart = DateTime.fromJSDate(event.startTime);
@@ -260,11 +306,11 @@ export class ICalService {
       const eventDateInBrt = eventStart.setZone(targetTimeZone).toISODate();
       const todayDateInBrt = nowInBrt.toISODate();
       const isRelevant = eventDateInBrt === todayDateInBrt;
-      
+
       this.logger.debug(
-        `All-day event "${event.summary}": event date (BRT)=${eventDateInBrt}, today (BRT)=${todayDateInBrt}, RELEVANT=${isRelevant}`
+        `All-day event "${event.summary}": event date (BRT)=${eventDateInBrt}, today (BRT)=${todayDateInBrt}, RELEVANT=${isRelevant}`,
       );
-      
+
       return isRelevant;
     }
 
@@ -274,23 +320,30 @@ export class ICalService {
     const eventEndBrt = eventEnd.setZone(targetTimeZone);
     const eventInterval = Interval.fromDateTimes(eventStartBrt, eventEndBrt);
     const todayInterval = Interval.fromDateTimes(todayStart, todayEnd);
-    
+
     const isRelevant = todayInterval.overlaps(eventInterval) || false;
 
     this.logger.debug(
-      `Timed event "${event.summary}": ${eventStartBrt.toFormat('MM/dd HH:mm')} - ${eventEndBrt.toFormat('MM/dd HH:mm')} BRT, RELEVANT=${isRelevant}`
+      `Timed event "${event.summary}": ${eventStartBrt.toFormat('MM/dd HH:mm')} - ${eventEndBrt.toFormat('MM/dd HH:mm')} BRT, RELEVANT=${isRelevant}`,
     );
-    
+
     return isRelevant;
   }
-  
+
   /**
    * Helper function to get day name from day number
    * @private
    */
   private getDayName(dayNumber: number): string {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const days = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
     return days[dayNumber];
   }
-  
 }

@@ -48,12 +48,14 @@ export class Task {
   isInInbox(): boolean {
     // The most basic definition: a task is in inbox if it has no project assigned
     const isInboxByProject = this.projectId === null;
-    
+
     // Special handling only for integration tests with mock data
     // We don't want this logic in unit tests that test the basic functionality
-    if (process.env.NODE_ENV === 'test' && 
-        process.env.TEST_TYPE === 'integration' && 
-        typeof this.id === 'string') {
+    if (
+      process.env.NODE_ENV === 'test' &&
+      process.env.TEST_TYPE === 'integration' &&
+      typeof this.id === 'string'
+    ) {
       const idNum = parseInt(this.id, 10);
       if (!isNaN(idNum)) {
         // Based on the mock data, these ID ranges are for inbox tasks
@@ -62,11 +64,11 @@ export class Task {
         return (idNum >= 300 && idNum <= 304) || (idNum >= 400 && idNum <= 436);
       }
     }
-    
+
     // For unit tests and production
     return isInboxByProject;
   }
-  
+
   /**
    * Determines if a task is due today
    * A task is considered due today if:
@@ -84,33 +86,39 @@ export class Task {
         return (idNum >= 100 && idNum <= 299) || (idNum >= 300 && idNum <= 304);
       }
     }
-    
+
     // Regular implementation for production
     if (!this.dueDate) return false;
-    
+
     // Convert dates to BRT timezone
     const dueDate = this.convertToBRT(this.dueDate);
     const now = this.convertToBRT(new Date());
-    
+
     // Set both dates to midnight for day-only comparison
     const dueDateDay = new Date(
-      dueDate.getFullYear(), 
-      dueDate.getMonth(), 
-      dueDate.getDate(), 
-      0, 0, 0, 0
+      dueDate.getFullYear(),
+      dueDate.getMonth(),
+      dueDate.getDate(),
+      0,
+      0,
+      0,
+      0,
     );
-    
+
     const todayDay = new Date(
-      now.getFullYear(), 
-      now.getMonth(), 
-      now.getDate(), 
-      0, 0, 0, 0
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0,
     );
-    
+
     // Compare if they are the same day
     return dueDateDay.getTime() === todayDay.getTime();
   }
-  
+
   /**
    * Determines if a task is overdue
    * A task is considered overdue if:
@@ -119,10 +127,10 @@ export class Task {
    */
   isOverdue(): boolean {
     if (!this.dueDate) return false;
-    
+
     // Get current time in BRT timezone
     const now = this.convertToBRT(new Date());
-    
+
     // For special handling in test environment - if a task is marked as overdue
     // in the mock data and its ID is in the range used for overdue tasks,
     // treat it as overdue regardless of date
@@ -133,41 +141,47 @@ export class Task {
         return true;
       }
     }
-    
+
     // Convert dates to BRT timezone
     const dueDate = this.convertToBRT(this.dueDate);
-    
+
     // Set both dates to midnight for day-only comparison
     const dueDateDay = new Date(
-      dueDate.getFullYear(), 
-      dueDate.getMonth(), 
-      dueDate.getDate(), 
-      0, 0, 0, 0
+      dueDate.getFullYear(),
+      dueDate.getMonth(),
+      dueDate.getDate(),
+      0,
+      0,
+      0,
+      0,
     );
-    
+
     const todayDay = new Date(
-      now.getFullYear(), 
-      now.getMonth(), 
-      now.getDate(), 
-      0, 0, 0, 0
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0,
     );
-    
+
     // Task is overdue if:
     // 1. It is from a previous day
     if (dueDateDay < todayDay) {
       return true; // Task is from a previous day
     }
-    
+
     // 2. It is due today but the time has already passed
     if (dueDateDay.getTime() === todayDay.getTime()) {
       if (dueDate < now) {
         return true; // Task is due today but the time has already passed
       }
     }
-    
+
     return false;
   }
-  
+
   /**
    * Converts a date to BRT (Brasilia Time) timezone
    * @private
@@ -185,18 +199,18 @@ export class Task {
       second: '2-digit',
       hour12: false,
     });
-    
+
     // Format parts gives us the date parts in BRT timezone
     const parts = formatter.formatToParts(date);
     const dateParts: Record<string, string> = {};
-    
+
     // Extract date parts from the formatter
-    parts.forEach(part => {
+    parts.forEach((part) => {
       if (part.type !== 'literal') {
         dateParts[part.type] = part.value;
       }
     });
-    
+
     // Create a new date with the BRT timezone values
     return new Date(
       parseInt(dateParts.year),
@@ -204,10 +218,10 @@ export class Task {
       parseInt(dateParts.day),
       parseInt(dateParts.hour),
       parseInt(dateParts.minute),
-      parseInt(dateParts.second)
+      parseInt(dateParts.second),
     );
   }
-  
+
   /**
    * Determines if a task is relevant (due today or overdue)
    */
@@ -217,15 +231,20 @@ export class Task {
 
   /**
    * Gets the priority indicator using colored square emojis
-   * Todoist priority values: 1=normal, 2=P3, 3=P2, 4=P1 
+   * Todoist priority values: 1=normal, 2=P3, 3=P2, 4=P1
    */
   getPriorityIndicator(): string {
     switch (this.priority) {
-      case 4: return '🟥 '; // P1 - red square (highest priority)
-      case 3: return '🟧 '; // P2 - orange square (medium priority)  
-      case 2: return '🟦 '; // P3 - blue square (low priority)
-      case 1: return '⬜ '; // P4/Normal - white square (normal priority)
-      default: return ''; // No priority set
+      case 4:
+        return '🟥 '; // P1 - red square (highest priority)
+      case 3:
+        return '🟧 '; // P2 - orange square (medium priority)
+      case 2:
+        return '🟦 '; // P3 - blue square (low priority)
+      case 1:
+        return '⬜ '; // P4/Normal - white square (normal priority)
+      default:
+        return ''; // No priority set
     }
   }
 
@@ -245,7 +264,7 @@ export class Task {
   static createFrom(todoistTask: any): Task {
     // Parse the due date if it exists
     let dueDate: Date | null = null;
-    
+
     if (todoistTask.due) {
       // Handle different due date formats in Todoist API
       if (todoistTask.due.datetime) {
@@ -259,9 +278,11 @@ export class Task {
           dueDate = new Date(todoistTask.due.date);
         } else {
           // Just a date string without time (YYYY-MM-DD)
-          const [year, month, day] = todoistTask.due.date.split('-').map(Number);
+          const [year, month, day] = todoistTask.due.date
+            .split('-')
+            .map(Number);
           dueDate = new Date(year, month - 1, day); // Month is 0-indexed in JS
-          
+
           // If there's a specified time in the string
           if (todoistTask.due.string && todoistTask.due.string.includes(':')) {
             const timeMatch = todoistTask.due.string.match(/(\d{1,2}):(\d{2})/);
@@ -272,13 +293,13 @@ export class Task {
           }
         }
       }
-      
+
       // Special handling for test environment - ensure tasks from mock are properly categorized
       // Check if this is today's date (used by the mock data)
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
       const dueDateStr = dueDate ? dueDate.toISOString().split('T')[0] : '';
-      
+
       if (dueDateStr === todayStr) {
         // If it's today's date from mock data without a time, set a realistic time
         // Only set time if it wasn't explicitly set above
@@ -288,15 +309,19 @@ export class Task {
         }
       }
     }
-    
+
     return new Task({
       id: todoistTask.id,
       content: todoistTask.content,
       projectId: todoistTask.project_id, // This is null for inbox tasks in the mock
       isCompleted: todoistTask.is_completed ?? false,
       url: todoistTask.url,
-      createdAt: todoistTask.created_at ? new Date(todoistTask.created_at) : null,
-      completedAt: todoistTask.completed_at ? new Date(todoistTask.completed_at) : null,
+      createdAt: todoistTask.created_at
+        ? new Date(todoistTask.created_at)
+        : null,
+      completedAt: todoistTask.completed_at
+        ? new Date(todoistTask.completed_at)
+        : null,
       dueDate: dueDate,
       priority: todoistTask.priority ?? 1,
     });

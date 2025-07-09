@@ -14,9 +14,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly configService: ConfigService) {
     // Initialize the bot with the token from config
     const token = this.configService.getTelegramBotToken();
-    
+
     // Create bot with polling enabled to receive messages
-    this.bot = new TelegramBot(token, { 
+    this.bot = new TelegramBot(token, {
       polling: true,
       // Only enable polling in production or with valid credentials
       // Will be checked in onModuleInit
@@ -28,33 +28,42 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
    */
   async onModuleInit(): Promise<void> {
     try {
-      const isDevelopment = this.configService.getEnvironment() === 'development';
-      
+      const isDevelopment =
+        this.configService.getEnvironment() === 'development';
+
       // Check if we have valid Telegram credentials
-      const hasCredentials = this.configService.getTelegramBotToken() && 
-                           this.configService.getTelegramChatId() &&
-                           this.configService.getTelegramBotToken() !== 'your_telegram_bot_token_here' &&
-                           this.configService.getTelegramChatId() !== 'your_telegram_chat_id_here';
-      
+      const hasCredentials =
+        this.configService.getTelegramBotToken() &&
+        this.configService.getTelegramChatId() &&
+        this.configService.getTelegramBotToken() !==
+          'your_telegram_bot_token_here' &&
+        this.configService.getTelegramChatId() !== 'your_telegram_chat_id_here';
+
       if (!isDevelopment || hasCredentials) {
         // Set up command handlers before launching
         this.setupCommandHandlers();
-        
+
         // Bot is already started with polling in constructor
         console.log('✅ Telegram bot launched successfully!');
-        
+
         // Send introduction message
         await this.sendIntroductionMessage();
       } else {
-        console.log('🟡 Running in development mode without valid Telegram credentials - Messages will be logged to console.');
-        console.log('💡 To enable Telegram in development, set ENVIRONMENT=production or add valid TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to .env');
-        
+        console.log(
+          '🟡 Running in development mode without valid Telegram credentials - Messages will be logged to console.',
+        );
+        console.log(
+          '💡 To enable Telegram in development, set ENVIRONMENT=production or add valid TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to .env',
+        );
+
         // Stop polling in development mode without credentials
         this.bot.stopPolling();
       }
     } catch (error) {
       console.warn('❌ Failed to launch Telegram bot:', error.message);
-      console.log('🟡 Continuing in development mode - Messages will be logged to console.');
+      console.log(
+        '🟡 Continuing in development mode - Messages will be logged to console.',
+      );
     }
   }
 
@@ -64,7 +73,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     this.bot.stopPolling();
   }
-  
+
   /**
    * Sets up command handlers for the Telegram bot
    */
@@ -74,84 +83,102 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       const chatId = msg.chat.id;
       await this.bot.sendMessage(
         chatId,
-        'Welcome to Briefly! I\'ll help you manage your tasks and calendar. ' +
-        'I\'ll send you daily updates at 7am, after your last meeting, and at 8pm.\n\n' +
-        'You can also trigger updates manually with these commands:\n' +
-        '/morning - Morning overview with calendar events and tasks\n' +
-        '/afternoon - Afternoon update with completed and remaining tasks\n' +
-        '/evening - Evening reminder with inbox tasks to triage',
-        { parse_mode: 'Markdown' }
+        "Welcome to Briefly! I'll help you manage your tasks and calendar. " +
+          "I'll send you daily updates at 7am, after your last meeting, and at 8pm.\n\n" +
+          'You can also trigger updates manually with these commands:\n' +
+          '/morning - Morning overview with calendar events and tasks\n' +
+          '/afternoon - Afternoon update with completed and remaining tasks\n' +
+          '/evening - Evening reminder with inbox tasks to triage',
+        { parse_mode: 'Markdown' },
       );
     });
-    
+
     // Command handler for /help
     this.bot.onText(/\/help/, async (msg) => {
       const chatId = msg.chat.id;
       await this.bot.sendMessage(
         chatId,
         '**Briefly Bot Commands**\n\n' +
-        '/start - Introduce the bot and its features\n' +
-        '/help - Show this help message\n' +
-        '/morning - Trigger the morning message\n' +
-        '/afternoon - Trigger the afternoon message\n' +
-        '/evening - Trigger the evening message',
-        { parse_mode: 'Markdown' }
+          '/start - Introduce the bot and its features\n' +
+          '/help - Show this help message\n' +
+          '/morning - Trigger the morning message\n' +
+          '/afternoon - Trigger the afternoon message\n' +
+          '/evening - Trigger the evening message',
+        { parse_mode: 'Markdown' },
       );
     });
-    
+
     // Command handler for /morning
     this.bot.onText(/\/morning/, async (msg) => {
       const chatId = msg.chat.id;
       if (!this.messagingService) {
-        await this.bot.sendMessage(chatId, 'The messaging service is still initializing. Please try again in a moment.');
+        await this.bot.sendMessage(
+          chatId,
+          'The messaging service is still initializing. Please try again in a moment.',
+        );
         return;
       }
-      
+
       await this.bot.sendMessage(chatId, 'Generating your morning overview...');
       try {
         // Call the messaging service to generate and send the morning message
         await this.messagingService.sendMorningMessage();
         // No need to reply again as the message is already sent by the service
       } catch (error) {
-        await this.bot.sendMessage(chatId, `Error generating morning message: ${error.message}`);
+        await this.bot.sendMessage(
+          chatId,
+          `Error generating morning message: ${error.message}`,
+        );
       }
     });
-    
+
     // Command handler for /afternoon
     this.bot.onText(/\/afternoon/, async (msg) => {
       const chatId = msg.chat.id;
       if (!this.messagingService) {
-        await this.bot.sendMessage(chatId, 'The messaging service is still initializing. Please try again in a moment.');
+        await this.bot.sendMessage(
+          chatId,
+          'The messaging service is still initializing. Please try again in a moment.',
+        );
         return;
       }
-      
+
       await this.bot.sendMessage(chatId, 'Generating your afternoon update...');
       try {
         // Call the messaging service to generate and send the afternoon message
         await this.messagingService.sendAfternoonMessage();
       } catch (error) {
-        await this.bot.sendMessage(chatId, `Error generating afternoon message: ${error.message}`);
+        await this.bot.sendMessage(
+          chatId,
+          `Error generating afternoon message: ${error.message}`,
+        );
       }
     });
-    
+
     // Command handler for /evening
     this.bot.onText(/\/evening/, async (msg) => {
       const chatId = msg.chat.id;
       if (!this.messagingService) {
-        await this.bot.sendMessage(chatId, 'The messaging service is still initializing. Please try again in a moment.');
+        await this.bot.sendMessage(
+          chatId,
+          'The messaging service is still initializing. Please try again in a moment.',
+        );
         return;
       }
-      
+
       await this.bot.sendMessage(chatId, 'Generating your evening reminder...');
       try {
         // Call the messaging service to generate and send the evening message
         await this.messagingService.sendEveningMessage();
       } catch (error) {
-        await this.bot.sendMessage(chatId, `Error generating evening message: ${error.message}`);
+        await this.bot.sendMessage(
+          chatId,
+          `Error generating evening message: ${error.message}`,
+        );
       }
     });
   }
-  
+
   /**
    * Sets the messaging service reference - called by MessagingModule
    */
@@ -166,33 +193,39 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private splitMessageIntoChunks(message: string, maxLength: number): string[] {
     const chunks: string[] = [];
     let currentChunk = '';
-    
+
     // Split by double newlines (paragraphs/sections) first
     const sections = message.split('\n\n');
-    
+
     for (const section of sections) {
       // If adding this section would exceed the limit, save current chunk and start new one
-      if (currentChunk.length + section.length + 2 > maxLength && currentChunk.length > 0) {
+      if (
+        currentChunk.length + section.length + 2 > maxLength &&
+        currentChunk.length > 0
+      ) {
         chunks.push(currentChunk.trim());
         currentChunk = '';
       }
-      
+
       // If a single section is too long, split it by single newlines
       if (section.length > maxLength) {
         const lines = section.split('\n');
         for (const line of lines) {
-          if (currentChunk.length + line.length + 1 > maxLength && currentChunk.length > 0) {
+          if (
+            currentChunk.length + line.length + 1 > maxLength &&
+            currentChunk.length > 0
+          ) {
             chunks.push(currentChunk.trim());
             currentChunk = '';
           }
-          
+
           // If a single line is still too long, force split it
           if (line.length > maxLength) {
             if (currentChunk.length > 0) {
               chunks.push(currentChunk.trim());
               currentChunk = '';
             }
-            
+
             // Split long line into smaller pieces
             for (let i = 0; i < line.length; i += maxLength) {
               chunks.push(line.substring(i, i + maxLength));
@@ -205,47 +238,52 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         currentChunk += (currentChunk.length > 0 ? '\n\n' : '') + section;
       }
     }
-    
+
     // Add the last chunk if it has content
     if (currentChunk.trim().length > 0) {
       chunks.push(currentChunk.trim());
     }
-    
+
     // If we somehow ended up with empty chunks, return the original message as one chunk
     if (chunks.length === 0) {
       chunks.push(message);
     }
-    
+
     return chunks;
   }
-  
+
   /**
    * Sends an introduction message when the bot starts
    */
   private async sendIntroductionMessage(): Promise<void> {
     try {
       const chatId = this.configService.getTelegramChatId();
-      const isDevelopment = this.configService.getEnvironment() === 'development';
-      
+      const isDevelopment =
+        this.configService.getEnvironment() === 'development';
+
       // Check if we have valid Telegram credentials
-      const hasCredentials = this.configService.getTelegramBotToken() && 
-                           this.configService.getTelegramChatId() &&
-                           this.configService.getTelegramBotToken() !== 'your_telegram_bot_token_here' &&
-                           this.configService.getTelegramChatId() !== 'your_telegram_chat_id_here';
-      
+      const hasCredentials =
+        this.configService.getTelegramBotToken() &&
+        this.configService.getTelegramChatId() &&
+        this.configService.getTelegramBotToken() !==
+          'your_telegram_bot_token_here' &&
+        this.configService.getTelegramChatId() !== 'your_telegram_chat_id_here';
+
       // Skip sending in development mode without credentials
       if (isDevelopment && !hasCredentials) {
         console.log('\n=== TELEGRAM INTRODUCTION (CONSOLE ONLY) ===');
-        console.log('Bot started and ready to use. Available commands:\n/morning - Morning overview\n/afternoon - Afternoon update\n/evening - Evening reminder');
+        console.log(
+          'Bot started and ready to use. Available commands:\n/morning - Morning overview\n/afternoon - Afternoon update\n/evening - Evening reminder',
+        );
         console.log('=====================================\n');
         return;
       }
-      
+
       // Send actual introduction - with more reliable delivery using node-telegram-bot-api
-      const message = 
+      const message =
         '🤖 **Briefly Bot Started**\n\n' +
-        'I\'m now active and ready to help you manage your tasks and calendar. ' +
-        'I\'ll send you three daily updates:\n\n' +
+        "I'm now active and ready to help you manage your tasks and calendar. " +
+        "I'll send you three daily updates:\n\n" +
         '☀️ **Morning (7am)**: Overview of calendar events and tasks\n' +
         '🌤️ **Afternoon (after final meeting)**: Update on completed tasks\n' +
         '🌙 **Evening (8pm)**: Reminder for inbox triage\n\n' +
@@ -253,14 +291,16 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         '/morning - Morning overview\n' +
         '/afternoon - Afternoon update\n' +
         '/evening - Evening reminder';
-      
+
       // Send directly to the configured chat ID for more reliability
       await this.bot.sendMessage(chatId, message, {
         parse_mode: 'Markdown',
       });
       console.log('✅ Telegram introduction message sent successfully!');
     } catch (error) {
-      console.warn(`❌ Failed to send Telegram introduction message: ${error.message}`);
+      console.warn(
+        `❌ Failed to send Telegram introduction message: ${error.message}`,
+      );
       // Don't throw error, just log warning
     }
   }
@@ -272,11 +312,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     try {
       // Get the chat ID from config
       const chatId = this.configService.getTelegramChatId();
-      
+
       // Check if in development mode without valid credentials, then just log instead
-      const isDevelopment = this.configService.getEnvironment() === 'development';
-      const hasCredentials = chatId && chatId !== 'your_telegram_chat_id_here';
-      
+      const isDevelopment =
+        this.configService.getEnvironment() === 'development';
+      const hasCredentials =
+        chatId && String(chatId) !== 'your_telegram_chat_id_here';
+
       if (isDevelopment && !hasCredentials) {
         console.log('📤 Telegram message (development mode):');
         console.log(message);
@@ -286,19 +328,19 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       // Common message options with disabled web page preview to prevent link unfurling
       const messageOptions = {
         parse_mode: 'Markdown' as TelegramBot.ParseMode,
-        disable_web_page_preview: true,  // Prevent links from unfurling
+        disable_web_page_preview: true, // Prevent links from unfurling
       };
 
       // Split long messages if needed (Telegram has a 4096 character limit per message)
       const chunks = this.splitMessageIntoChunks(message, 4000); // Leave some margin for safety
-      
+
       if (chunks.length > 1) {
         for (let i = 0; i < chunks.length; i++) {
           await this.bot.sendMessage(chatId, chunks[i], messageOptions);
-          
+
           // Add small delay between multiple message chunks
           if (i < chunks.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise((resolve) => setTimeout(resolve, 500));
           }
         }
       } else {
@@ -311,6 +353,90 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Sends a message to a specific chat ID with optional keyboard
+   */
+  public async sendMessageToChat(
+    chatId: number,
+    message: string,
+    keyboard?: any,
+  ): Promise<void> {
+    try {
+      const messageText = message;
+
+      // Check if in development mode without valid credentials, then just log instead
+      const isDevelopment =
+        this.configService.getEnvironment() === 'development';
+      const hasCredentials =
+        chatId && String(chatId) !== 'your_telegram_chat_id_here';
+
+      if (isDevelopment && !hasCredentials) {
+        console.log('📤 Telegram message (development mode):');
+        console.log(messageText);
+        if (keyboard) {
+          console.log('📱 Keyboard:', JSON.stringify(keyboard, null, 2));
+        }
+        return;
+      }
+
+      // Common message options with disabled web page preview to prevent link unfurling
+      const messageOptions: any = {
+        parse_mode: 'Markdown' as TelegramBot.ParseMode,
+        disable_web_page_preview: true, // Prevent links from unfurling
+      };
+
+      // Add keyboard if provided
+      if (keyboard) {
+        messageOptions.reply_markup = keyboard;
+      }
+
+      // Split long messages if needed (Telegram has a 4096 character limit per message)
+      const chunks = this.splitMessageIntoChunks(messageText, 4000); // Leave some margin for safety
+
+      if (chunks.length > 1) {
+        for (let i = 0; i < chunks.length; i++) {
+          // Only add keyboard to the last chunk
+          const chunkOptions =
+            i === chunks.length - 1
+              ? messageOptions
+              : {
+                  parse_mode: 'Markdown' as TelegramBot.ParseMode,
+                  disable_web_page_preview: true,
+                };
+
+          await this.bot.sendMessage(chatId, chunks[i], chunkOptions);
+
+          // Add small delay between multiple message chunks
+          if (i < chunks.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+        }
+      } else {
+        await this.bot.sendMessage(chatId, messageText, messageOptions);
+      }
+    } catch (error) {
+      console.warn(`❌ Failed to send Telegram message: ${error.message}`);
+      throw error; // Re-throw to allow retry logic
+    }
+  }
+
+  /**
+   * Answers a callback query from an inline keyboard
+   */
+  public async answerCallbackQuery(
+    callbackQueryId: string,
+    text?: string,
+  ): Promise<void> {
+    try {
+      await this.bot.answerCallbackQuery(callbackQueryId, {
+        text: text || 'Processing...',
+      });
+    } catch (error) {
+      console.warn(`❌ Failed to answer callback query: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * Sends a message to the configured Telegram chat
    */
   async sendMorningMessage(
@@ -319,14 +445,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     groupedTasks: Record<string, string[]>,
   ): Promise<void> {
     // Format the message according to the template
-    let message = '☀️ **Good morning! Here\'s today\'s overview:**\n\n';
+    let message = "☀️ **Good morning! Here's today's overview:**\n\n";
 
     // Calendar events section
     message += '📅 **Calendar Events:**\n';
     if (calendarEvents.length === 0) {
       message += '- No calendar events for today\n';
     } else {
-      calendarEvents.forEach(event => {
+      calendarEvents.forEach((event) => {
         message += `- ${event}\n`;
       });
     }
@@ -337,7 +463,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (newTasks.length === 0) {
       message += '- No new tasks since yesterday\n';
     } else {
-      newTasks.forEach(task => {
+      newTasks.forEach((task) => {
         message += `- ${task}\n`;
       });
     }
@@ -350,7 +476,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     } else {
       for (const [category, tasks] of Object.entries(groupedTasks)) {
         message += `**${category}:**\n`;
-        tasks.forEach(task => {
+        tasks.forEach((task) => {
           message += `- ${task}\n`;
         });
         message += '\n';
@@ -377,7 +503,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (completedTasks.length === 0) {
       message += '- No tasks completed since morning\n';
     } else {
-      completedTasks.forEach(task => {
+      completedTasks.forEach((task) => {
         message += `- ${task}\n`;
       });
     }
@@ -388,7 +514,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (newInboxTasks.length === 0) {
       message += '- No new inbox tasks\n';
     } else {
-      newInboxTasks.forEach(task => {
+      newInboxTasks.forEach((task) => {
         message += `- ${task}\n`;
       });
     }
@@ -401,7 +527,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     } else {
       for (const [category, tasks] of Object.entries(groupedTasks)) {
         message += `**${category}:**\n`;
-        tasks.forEach(task => {
+        tasks.forEach((task) => {
           message += `- ${task}\n`;
         });
         message += '\n';
@@ -432,7 +558,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     } else {
       for (const [category, tasks] of Object.entries(groupedInboxTasks)) {
         message += `**${category}:**\n`;
-        tasks.forEach(task => {
+        tasks.forEach((task) => {
           message += `- ${task}\n`;
         });
         message += '\n';

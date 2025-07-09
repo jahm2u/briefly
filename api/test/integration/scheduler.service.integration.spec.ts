@@ -23,7 +23,9 @@ describe('SchedulerService Integration', () => {
       getTasks: jest.fn().mockImplementation(() => Promise.resolve([])),
       getRelevantTasks: jest.fn().mockImplementation(() => Promise.resolve([])),
       getInboxTasks: jest.fn().mockImplementation(() => Promise.resolve([])),
-      getCompletedTasksSince: jest.fn().mockImplementation(() => Promise.resolve([])),
+      getCompletedTasksSince: jest
+        .fn()
+        .mockImplementation(() => Promise.resolve([])),
     };
 
     const icalServiceMock = {
@@ -36,7 +38,9 @@ describe('SchedulerService Integration', () => {
 
     const messagingServiceMock = {
       sendMorningMessage: jest.fn().mockImplementation(() => Promise.resolve()),
-      sendAfternoonMessage: jest.fn().mockImplementation(() => Promise.resolve()),
+      sendAfternoonMessage: jest
+        .fn()
+        .mockImplementation(() => Promise.resolve()),
       sendEveningMessage: jest.fn().mockImplementation(() => Promise.resolve()),
     };
 
@@ -79,7 +83,7 @@ describe('SchedulerService Integration', () => {
       // Mock the current date
       const mockDate = new Date('2023-01-15T07:00:00Z');
       jest.useFakeTimers().setSystemTime(mockDate);
-      
+
       // Mock calendar events
       const mockCalendarEvents = [
         new CalendarEvent({
@@ -89,7 +93,7 @@ describe('SchedulerService Integration', () => {
           endTime: new Date('2023-01-15T09:30:00Z'),
         }),
       ];
-      
+
       // Mock tasks
       const mockTasks = [
         new Task({
@@ -98,20 +102,26 @@ describe('SchedulerService Integration', () => {
           url: 'https://todoist.com/task/1',
         }),
       ];
-      
+
       // Set up mock responses
-      (icalService.getTodayEvents as jest.Mock).mockImplementation(() => Promise.resolve(mockCalendarEvents));
-      (todoistService.getRelevantTasks as jest.Mock).mockImplementation(() => Promise.resolve(mockTasks));
-      (todoistService.getTasks as jest.Mock).mockImplementation(() => Promise.resolve(mockTasks));
+      (icalService.getTodayEvents as jest.Mock).mockImplementation(() =>
+        Promise.resolve(mockCalendarEvents),
+      );
+      (todoistService.getRelevantTasks as jest.Mock).mockImplementation(() =>
+        Promise.resolve(mockTasks),
+      );
+      (todoistService.getTasks as jest.Mock).mockImplementation(() =>
+        Promise.resolve(mockTasks),
+      );
       // Execute the morning message function
       await schedulerService.sendMorningMessage();
-      
+
       // Verify the services were called with the correct arguments
       expect(icalService.getTodayEvents).toHaveBeenCalled();
       expect(todoistService.getRelevantTasks).toHaveBeenCalled();
       expect(todoistService.getTasks).toHaveBeenCalled();
       expect(messagingService.sendMorningMessage).toHaveBeenCalled();
-      
+
       // Reset timer mocks
       jest.useRealTimers();
     });
@@ -122,7 +132,7 @@ describe('SchedulerService Integration', () => {
       // Mock the current date
       const mockDate = new Date('2023-01-15T14:00:00Z');
       jest.useFakeTimers().setSystemTime(mockDate);
-      
+
       // Mock completed tasks
       const mockCompletedTasks = [
         new Task({
@@ -132,7 +142,7 @@ describe('SchedulerService Integration', () => {
           isCompleted: true,
         }),
       ];
-      
+
       // Mock inbox tasks
       const mockInboxTasks = [
         new Task({
@@ -142,7 +152,7 @@ describe('SchedulerService Integration', () => {
           projectId: null,
         }),
       ];
-      
+
       // Mock all current tasks
       const mockAllTasks = [
         ...mockInboxTasks,
@@ -153,26 +163,34 @@ describe('SchedulerService Integration', () => {
           projectId: 'project1',
         }),
       ];
-      
+
       // Set up mock responses
-      (todoistService.getCompletedTasksSince as jest.Mock).mockImplementation(() => Promise.resolve(mockCompletedTasks));
-      (todoistService.getInboxTasks as jest.Mock).mockImplementation(() => Promise.resolve(mockInboxTasks));
-      (todoistService.getTasks as jest.Mock).mockImplementation(() => Promise.resolve(mockAllTasks));
+      (todoistService.getCompletedTasksSince as jest.Mock).mockImplementation(
+        () => Promise.resolve(mockCompletedTasks),
+      );
+      (todoistService.getInboxTasks as jest.Mock).mockImplementation(() =>
+        Promise.resolve(mockInboxTasks),
+      );
+      (todoistService.getTasks as jest.Mock).mockImplementation(() =>
+        Promise.resolve(mockAllTasks),
+      );
       // Initialize the lastMorningDate for the test
-      (schedulerService as any).lastMorningDate = new Date('2023-01-15T07:00:00Z');
+      (schedulerService as any).lastMorningDate = new Date(
+        '2023-01-15T07:00:00Z',
+      );
       (schedulerService as any).morningTasks = [];
-      
+
       // Execute the afternoon message function
       await schedulerService.sendAfternoonMessage();
-      
+
       // Verify the services were called with the correct arguments
       expect(todoistService.getCompletedTasksSince).toHaveBeenCalledWith(
-        expect.any(Date)
+        expect.any(Date),
       );
       expect(todoistService.getInboxTasks).toHaveBeenCalled();
       expect(todoistService.getTasks).toHaveBeenCalled();
       expect(messagingService.sendAfternoonMessage).toHaveBeenCalled();
-      
+
       // Reset timer mocks
       jest.useRealTimers();
     });
@@ -189,12 +207,14 @@ describe('SchedulerService Integration', () => {
           projectId: null,
         }),
       ];
-      
+
       // Set up mock responses
-      (todoistService.getInboxTasks as jest.Mock).mockImplementation(() => Promise.resolve(mockInboxTasks));
+      (todoistService.getInboxTasks as jest.Mock).mockImplementation(() =>
+        Promise.resolve(mockInboxTasks),
+      );
       // Execute the evening message function
       await schedulerService.sendEveningMessage();
-      
+
       // Verify the services were called with the correct arguments
       expect(todoistService.getInboxTasks).toHaveBeenCalled();
       expect(messagingService.sendEveningMessage).toHaveBeenCalled();

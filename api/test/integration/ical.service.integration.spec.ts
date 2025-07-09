@@ -97,8 +97,13 @@ describe('ICalService Integration', () => {
         getFirstPropertyValue: jest.fn((prop) => {
           if (prop === 'uid') return 'event1';
           if (prop === 'summary') return 'Team Daily Standup';
-          if (prop === 'dtstart') return { toJSDate: () => new Date('2023-01-15T09:00:00Z'), isDate: false };
-          if (prop === 'dtend') return { toJSDate: () => new Date('2023-01-15T09:30:00Z') };
+          if (prop === 'dtstart')
+            return {
+              toJSDate: () => new Date('2023-01-15T09:00:00Z'),
+              isDate: false,
+            };
+          if (prop === 'dtend')
+            return { toJSDate: () => new Date('2023-01-15T09:30:00Z') };
           if (prop === 'description') return 'Daily team sync meeting';
           if (prop === 'location') return 'Conference Room A';
           return null;
@@ -110,8 +115,13 @@ describe('ICalService Integration', () => {
         getFirstPropertyValue: jest.fn((prop) => {
           if (prop === 'uid') return 'event2';
           if (prop === 'summary') return 'Strategic Roadmap Discussion';
-          if (prop === 'dtstart') return { toJSDate: () => new Date('2023-01-15T14:00:00Z'), isDate: false };
-          if (prop === 'dtend') return { toJSDate: () => new Date('2023-01-15T15:00:00Z') };
+          if (prop === 'dtstart')
+            return {
+              toJSDate: () => new Date('2023-01-15T14:00:00Z'),
+              isDate: false,
+            };
+          if (prop === 'dtend')
+            return { toJSDate: () => new Date('2023-01-15T15:00:00Z') };
           if (prop === 'description') return 'Quarterly planning meeting';
           if (prop === 'location') return 'Conference Room B';
           return null;

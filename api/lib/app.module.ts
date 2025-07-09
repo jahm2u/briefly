@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MessagesModule } from './core/modules/messages/messages.module';
+import { ClaudeModule } from './core/modules/claude/claude.module';
 import { HealthController } from './core/controllers/health.controller';
 import { ApiValidatorUtil } from './core/utils/api-validator.util';
 
@@ -19,6 +20,8 @@ import { ApiValidatorUtil } from './core/utils/api-validator.util';
     ScheduleModule.forRoot(),
     // Import the messages module
     MessagesModule,
+    // Import the Claude module
+    ClaudeModule,
   ],
   controllers: [HealthController],
   providers: [

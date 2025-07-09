@@ -27,8 +27,12 @@ export class SchedulerService implements OnModuleInit {
   onModuleInit() {
     const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const now = new Date();
-    this.logger.log(`Scheduler initialized. Node.js system timezone: ${systemTimezone}`);
-    this.logger.log(`Current time - UTC: ${now.toISOString()}, BRT: ${now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`);
+    this.logger.log(
+      `Scheduler initialized. Node.js system timezone: ${systemTimezone}`,
+    );
+    this.logger.log(
+      `Current time - UTC: ${now.toISOString()}, BRT: ${now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`,
+    );
   }
 
   /**
@@ -40,15 +44,17 @@ export class SchedulerService implements OnModuleInit {
   })
   async sendMorningMessage(): Promise<void> {
     const now = new Date();
-    this.logger.log(`Sending morning message... Container time: ${now.toISOString()}, BRT time: ${now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`);
-    
+    this.logger.log(
+      `Sending morning message... Container time: ${now.toISOString()}, BRT time: ${now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`,
+    );
+
     try {
       // Record the current date for reference
       this.lastMorningDate = now;
-      
+
       // Delegate to the MessagingService which has the proper API filtering logic
       await this.messagingService.sendMorningMessage();
-      
+
       this.logger.log('Morning message sent successfully');
     } catch (error) {
       this.logger.error(`Failed to send morning message: ${error.message}`);
@@ -63,7 +69,9 @@ export class SchedulerService implements OnModuleInit {
   })
   async sendScheduledAfternoonMessage(): Promise<void> {
     const now = new Date();
-    this.logger.log(`Sending scheduled afternoon message... Container time: ${now.toISOString()}, BRT time: ${now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`);
+    this.logger.log(
+      `Sending scheduled afternoon message... Container time: ${now.toISOString()}, BRT time: ${now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`,
+    );
     await this.sendAfternoonMessage();
   }
 
@@ -76,12 +84,14 @@ export class SchedulerService implements OnModuleInit {
   })
   async sendEveningMessage(): Promise<void> {
     const now = new Date();
-    this.logger.log(`Sending evening message... Container time: ${now.toISOString()}, BRT time: ${now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`);
-    
+    this.logger.log(
+      `Sending evening message... Container time: ${now.toISOString()}, BRT time: ${now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`,
+    );
+
     try {
       // Delegate to the MessagingService which has the proper API filtering logic
       await this.messagingService.sendEveningMessage();
-      
+
       this.logger.log('Evening message sent successfully');
     } catch (error) {
       this.logger.error(`Failed to send evening message: ${error.message}`);
@@ -95,12 +105,14 @@ export class SchedulerService implements OnModuleInit {
    */
   async sendAfternoonMessage(): Promise<void> {
     const now = new Date();
-    this.logger.log(`Sending afternoon message... Container time: ${now.toISOString()}, BRT time: ${now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`);
-    
+    this.logger.log(
+      `Sending afternoon message... Container time: ${now.toISOString()}, BRT time: ${now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })}`,
+    );
+
     try {
       // Delegate to the MessagingService which has the proper API filtering logic
       await this.messagingService.sendAfternoonMessage();
-      
+
       this.logger.log('Afternoon message sent successfully');
     } catch (error) {
       this.logger.error(`Failed to send afternoon message: ${error.message}`);
