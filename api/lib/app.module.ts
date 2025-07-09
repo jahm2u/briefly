@@ -13,6 +13,7 @@ import { ApiValidatorUtil } from './core/utils/api-validator.util';
     // Load environment variables
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '../.env',
     }),
     // Enable scheduling capabilities
     ScheduleModule.forRoot(),
