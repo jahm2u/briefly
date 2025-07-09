@@ -225,21 +225,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           { parse_mode: 'Markdown' }
         );
 
-        // Get conversation history
-        const history = this.conversationHistory.get(chatId) || [];
-        
         console.log(`[Claude] Executing command with template: ${selection.command}_t.md`);
 
         // Execute the command
         const response = await this.claudeCliService.executeCommand(
           selection,
-          selection.extractedRequest,
-          history
+          selection.extractedRequest
         );
 
         console.log(`[Claude] Command execution result: ${response.type}`);
 
         // Update conversation history
+        const history = this.conversationHistory.get(chatId) || [];
         history.push(`User: ${request}`);
         history.push(`Claude: ${response.message}`);
         this.conversationHistory.set(chatId, history.slice(-10)); // Keep last 10 messages

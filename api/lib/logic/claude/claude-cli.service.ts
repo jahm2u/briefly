@@ -26,7 +26,6 @@ export class ClaudeCliService {
   async executeCommand(
     selection: CommandSelection,
     userRequest: string,
-    conversationHistory: string[] = [],
   ): Promise<ClaudeResponse> {
     try {
       // Load the appropriate command template
@@ -58,8 +57,8 @@ export class ClaudeCliService {
       const tempFile = path.join(this.claudeDir, `temp_${Date.now()}.md`);
       await fs.writeFile(tempFile, template);
 
-      // Execute Claude CLI with optimized flags for automation
-      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && claude --file ${tempFile} -p --output-format json --max-turns 10 --verbose`;
+      // Execute Claude CLI by piping the template content
+      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && cat ${tempFile} | claude -p --output-format json --max-turns 10 --verbose`;
 
       console.log(`[Claude] Executing: ${claudeCommand}`);
 
