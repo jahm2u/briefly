@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
-import { CommandSelection } from './claude-command-selector.service';
 
 const execAsync = promisify(exec);
 
@@ -21,29 +20,30 @@ export interface ClaudeResponse {
 export class ClaudeCliService {
 
   async executeCommand(
-    selection: CommandSelection,
     userRequest: string,
   ): Promise<ClaudeResponse> {
     try {
-      // Execute Claude CLI with the selected command and user request
-      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && claude "/${selection.command}_t ${userRequest}" -p --output-format json --max-turns 10 --verbose --dangerously-skip-permissions`;
+      // Execute Claude CLI directly with the user request
+      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && claude "${userRequest}" -p --output-format json --max-turns 5 --dangerously-skip-permissions`;
 
       console.log(`[Claude] Executing: ${claudeCommand}`);
       console.log(`[Claude] Starting execution at: ${new Date().toISOString()}`);
 
       const { stdout, stderr } = await execAsync(claudeCommand, {
-        timeout: 120000, // 2 minutes timeout
+        timeout: 60000, // 1 minute timeout
         maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large outputs
         killSignal: 'SIGTERM',
       });
 
       console.log(`[Claude] Execution completed at: ${new Date().toISOString()}`);
+      console.log(`[Claude] Raw stdout (${stdout.length} chars):`, stdout);
+      console.log(`[Claude] Raw stderr:`, stderr);
 
       // Parse Claude's response and extract important information
       const response = await this.parseClaudeResponse(
         stdout,
         stderr,
-        selection.command,
+        'direct',
       );
 
       return response;
@@ -53,7 +53,7 @@ export class ClaudeCliService {
         type: 'error',
         message: `Failed to execute Claude CLI: ${error.message}`,
         metadata: {
-          command: selection.command,
+          command: 'direct',
         },
       };
     }

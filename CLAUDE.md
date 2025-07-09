@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🗺️ Key Documentation References
+
+- **Application Architecture**: `/docs/ARCHITECTURE.md` - NestJS clean architecture overview
+- **Claude CLI Integration**: `/docs/CLAUDE_CLI_INTEGRATION.md` 🤖 - Telegram bot integration
+- **Development Commands**: See below for common commands
+- **API Endpoints**: `/docs/API_ENDPOINTS.md` - HTTP endpoints reference
+- **Environment Setup**: `/docs/ENVIRONMENT_SETUP.md` - Local development setup
+- **Deployment Guide**: `/docs/DEPLOYMENT.md` 🚀 - Docker & production deployment
+- **Testing Strategy**: `/docs/TESTING.md` - Unit, integration, e2e tests
+
+## 📚 CRITICAL DOCUMENTATION PATTERN
+
+**ALWAYS ADD IMPORTANT DOCS HERE!** When you create or discover:
+- Architecture diagrams → Add reference path here
+- Database schemas → Add reference path here  
+- Problem solutions → Add reference path here
+- Setup guides → Add reference path here
+
+This prevents context loss! Update this file IMMEDIATELY when creating important docs.
+
 ## Common Development Commands
 
 All commands should be run from the `/api` directory:
@@ -25,144 +45,23 @@ npm run lint             # Run ESLint with auto-fix
 npm run format           # Format code with Prettier
 ```
 
-## Architecture Overview
+## Quick Architecture Overview
 
-This is a NestJS application following clean architecture principles. The codebase is organized to separate business logic from infrastructure concerns:
+This is a NestJS application with:
+- **`/api/lib/core/`** - Infrastructure (services, controllers, modules)
+- **`/api/lib/logic/`** - Business logic (grouping, messaging, claude)
+- **Clean separation** between infrastructure and business concerns
 
-### Directory Structure
-- **`/api/lib/`** - Main application code (not `/api/src/`)
-  - **`core/`** - Infrastructure layer
-    - `config/` - Configuration management with NestJS ConfigModule
-    - `services/` - External service integrations (Todoist, Telegram, OpenAI, iCal)
-    - `models/` - Domain models (Task, CalendarEvent)
-    - `controllers/` - HTTP endpoints
-    - `modules/` - Feature modules (messages, claude)
-  - **`logic/`** - Business logic layer
-    - `grouping/` - GPT-based task grouping
-    - `messaging/` - Message composition for Telegram
-    - `claude/` - Claude CLI integration services
-
-### Key Integration Points
-
-1. **Todoist Integration** (`todoist-fixed.service.ts`)
-   - Uses `TodoistAdapter` to handle API responses
-   - Fetches tasks with filters and labels
-   - Generates deeplinks for tasks
-
-2. **Telegram Bot** (`telegram.service.ts`)
-   - Uses Telegraf library
-   - Sends formatted messages with HTML parse mode
-   - Handles emoji and special formatting
-   - Supports Claude CLI commands via `/claude` command
-
-3. **OpenAI GPT** (`grouping.service.ts`, `messaging.service.ts`)
-   - Task grouping without modifying original text
-   - Motivational message generation
-   - Uses gpt-4.1-mini model
-
-4. **iCal Integration** (`ical.service.ts`)
-   - Parses calendar URLs from environment
-   - Extracts events for specified date ranges
-   - Handles recurring events
-
-5. **Claude CLI Integration** (`claude-cli.service.ts`)
-   - Executes Claude CLI commands with structured templates
-   - Handles command selection and response parsing
-   - Manages git workflow with automatic branching and PRs
-
-### Scheduled Jobs
-
-The application runs three daily jobs via `SchedulerService`:
-- Morning (7:00 AM): Tasks + Calendar events
-- Afternoon (3:30 PM): Progress recap
-- Evening (8:00 PM): Inbox triage reminder
-
-### API Endpoints
-
-- `GET /api/health` - Health check
-- `POST /api/messages/morning` - Trigger morning message
-- `POST /api/messages/afternoon` - Trigger afternoon message
-- `POST /api/messages/evening` - Trigger evening message
-- `POST /api/claude-telegram/webhook` - Telegram webhook for Claude CLI commands
-
-### Environment Configuration
-
-Single `.env` file in root directory with:
-- `TODOIST_API_TOKEN`
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
-- `OPENAI_API_KEY`
-- `ICAL_URLS` (comma-separated)
-
-### Testing Strategy
-
-- **Unit tests**: Test individual services and models in isolation
-- **Integration tests**: Test external API integrations with real HTTP calls
-- **Mocks**: Comprehensive mocks for all external services in `/test/mocks/`
-- Tests use Jest with TypeScript support
-
-### Docker Deployment
-
-- Multi-stage Dockerfile in `/api/`
-- Single docker-compose.yml for production deployment
-- Start: `docker-compose up -d`
-- Stop: `docker-compose down`
-- Runs on port 5100
+For detailed architecture information, see `/docs/ARCHITECTURE.md`.
 
 ## Claude CLI Integration
 
-### Commands Available
+The application integrates with Claude CLI via Telegram bot:
+- Use `/claude <request>` in Telegram
+- Direct execution without templates
+- Automatic file editing and git workflow
 
-- `/claude <request>` - Send a request to Claude CLI
-  - Automatically selects between "plan" and "work" commands
-  - Uses structured output for intelligent command selection
-  - Handles confirmations and back-and-forth conversation
-
-### Command Templates
-
-Located in `.claude/commands/`:
-- `plan_t.md` - Template for planning features and creating GitHub issues
-- `work_t.md` - Template for working on existing issues and implementing code
-
-### Git Workflow
-
-Claude CLI is configured to:
-1. **Create feature branches** for all changes
-2. **Generate pull requests** instead of direct commits to main
-3. **Preserve .env file** during deployments
-4. **Auto-commit changes** with descriptive messages
-5. **Push changes to remote** using SSH keys
-
-### Permissions
-
-Claude CLI has permission to:
-- ✅ Read all files in the repository
-- ✅ Edit files in `/api/lib/` and `/api/src/`
-- ✅ Create new files as needed
-- ✅ Run npm commands in `/api/` directory
-- ✅ Execute git commands (branch, commit, push)
-- ✅ Create pull requests via GitHub API
-- ❌ Modify deployment configuration files
-- ❌ Edit `.env` files directly
-- ❌ Modify Docker configuration
-- ❌ Change GitHub workflow files
-
-### Safety Measures
-
-- All changes go through pull request review
-- Automatic linting and type checking before commits
-- Preservation of environment configuration
-- Graceful error handling with user feedback
-- Rate limiting to prevent abuse
-
-### Usage Instructions
-
-1. **Send command via Telegram**: `/claude add user authentication feature`
-2. **Claude analyzes request** and selects appropriate command template
-3. **Confirmation required** for destructive operations
-4. **Changes are implemented** following existing patterns
-5. **Pull request created** with detailed description
-6. **User receives PR link** via Telegram
+For full integration details, see `/docs/CLAUDE_CLI_INTEGRATION.md`.
 
 ## Important Instructions
 

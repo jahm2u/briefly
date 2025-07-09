@@ -26,7 +26,8 @@
       "Bash(npm install:*)",
       "Bash(pm2 logs:*)",
       "Bash(docker compose logs:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "WebFetch(domain:docs.anthropic.com)"
     ],
     "deny": []
   }

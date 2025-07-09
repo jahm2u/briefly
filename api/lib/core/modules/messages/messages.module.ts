@@ -7,7 +7,6 @@ import { TodoistService } from '../../services/todoist.service';
 import { ICalService } from '../../services/ical.service';
 import { TelegramService } from '../../services/telegram.service';
 import { ConfigService } from '../../services/config.service';
-import { ClaudeCommandSelectorService } from '../../../logic/claude/claude-command-selector.service';
 import { ClaudeCliService } from '../../../logic/claude/claude-cli.service';
 
 /**
@@ -24,7 +23,6 @@ import { ClaudeCliService } from '../../../logic/claude/claude-cli.service';
     ICalService,
     TelegramService,
     ConfigService,
-    ClaudeCommandSelectorService,
     ClaudeCliService,
   ],
   exports: [SchedulerService, MessagingService],
@@ -38,7 +36,6 @@ export class MessagesModule {
   constructor(
     private readonly telegramService: TelegramService,
     private readonly messagingService: MessagingService,
-    private readonly claudeCommandSelector: ClaudeCommandSelectorService,
     private readonly claudeCliService: ClaudeCliService,
   ) {
     // Inject the messaging service into the telegram service
@@ -46,6 +43,6 @@ export class MessagesModule {
     this.telegramService.setMessagingService(this.messagingService);
     
     // Inject Claude services for /claude command handling
-    this.telegramService.setClaudeServices(this.claudeCommandSelector, this.claudeCliService);
+    this.telegramService.setClaudeServices(this.claudeCliService);
   }
 }

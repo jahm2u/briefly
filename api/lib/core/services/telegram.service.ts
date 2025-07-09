@@ -10,7 +10,6 @@ import { ConfigService } from './config.service';
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private readonly bot: TelegramBot;
   private messagingService: any; // Will be injected later by MessagingModule
-  private claudeCommandSelector: any; // Will be injected later by MessagingModule
   private claudeCliService: any; // Will be injected later by MessagingModule
   private readonly conversationHistory = new Map<number, string[]>();
   private readonly pendingConfirmations = new Map<number, any>();
@@ -197,7 +196,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      if (!this.claudeCommandSelector || !this.claudeCliService) {
+      if (!this.claudeCliService) {
         await this.bot.sendMessage(
           chatId,
           'Claude services are still initializing. Please try again in a moment.'
@@ -206,32 +205,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }
 
       try {
-        // Send "thinking" message
-        console.log(`[Claude] Analyzing request: ${request}`);
-        await this.bot.sendMessage(chatId, '🤖 Analyzing your request...');
+        // Send processing message
+        console.log(`[Claude] Processing request: ${request}`);
+        await this.bot.sendMessage(chatId, '🤖 Processing your request...');
 
-        // Select appropriate command
-        const selection = await this.claudeCommandSelector.selectCommand(request);
-        
-        console.log(`[Claude] Command selected: ${selection.command} (${selection.confidence}% confidence)`);
-
-        // Send selection confirmation
-        await this.bot.sendMessage(
-          chatId,
-          `🎯 **Command Selected**: ${selection.command.toUpperCase()}\n` +
-          `💭 **Reasoning**: ${selection.reasoning}\n` +
-          `⚡ **Confidence**: ${selection.confidence}%\n\n` +
-          `🔄 Processing your request...`,
-          { parse_mode: 'Markdown' }
-        );
-
-        console.log(`[Claude] Executing command with template: ${selection.command}_t.md`);
-
-        // Execute the command
-        const response = await this.claudeCliService.executeCommand(
-          selection,
-          selection.extractedRequest
-        );
+        // Execute the command directly
+        const response = await this.claudeCliService.executeCommand(request);
 
         console.log(`[Claude] Command execution result: ${response.type}`);
 
@@ -294,8 +273,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   /**
    * Sets the Claude services references - called by MessagingModule
    */
-  setClaudeServices(commandSelector: any, cliService: any): void {
-    this.claudeCommandSelector = commandSelector;
+  setClaudeServices(cliService: any): void {
     this.claudeCliService = cliService;
   }
 
