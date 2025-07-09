@@ -38,7 +38,7 @@ export class ClaudeCliService {
       // Set timeout for the operation
       const timeoutId = setTimeout(() => {
         abortController.abort();
-      }, 120000); // 2 minutes timeout
+      }, 300000); // 5 minutes timeout
 
       try {
         // Use TypeScript SDK with proper working directory
