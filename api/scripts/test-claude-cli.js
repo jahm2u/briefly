@@ -61,29 +61,29 @@ function testClaudeVersion() {
   });
 }
 
-// Test 3: Authentication status
-function testClaudeAuth() {
+// Test 3: Check if Claude CLI is ready (no auth command exists)
+function testClaudeReady() {
   return new Promise((resolve) => {
-    console.log('\nTest 3: Checking Claude CLI authentication...');
+    console.log('\nTest 3: Checking if Claude CLI is ready...');
     
-    const auth = spawn('claude', ['auth', 'status']);
+    const help = spawn('claude', ['--help']);
     let output = '';
     let error = '';
     
-    auth.stdout.on('data', (data) => {
+    help.stdout.on('data', (data) => {
       output += data.toString();
     });
     
-    auth.stderr.on('data', (data) => {
+    help.stderr.on('data', (data) => {
       error += data.toString();
     });
     
-    auth.on('close', (code) => {
-      if (code === 0) {
-        console.log(`✅ Authentication status: ${output.trim()}`);
+    help.on('close', (code) => {
+      if (code === 0 && output.includes('Claude Code')) {
+        console.log(`✅ Claude CLI is ready and responsive`);
       } else {
-        console.log(`❌ Authentication check failed (code: ${code})`);
-        console.log(`Output: ${output}`);
+        console.log(`❌ Claude CLI help failed (code: ${code})`);
+        console.log(`Output: ${output.substring(0, 200)}...`);
         console.log(`Error: ${error}`);
       }
       resolve(code === 0);
@@ -205,7 +205,7 @@ async function runTests() {
   const results = {
     availability: await testClaudeAvailability(),
     version: await testClaudeVersion(),
-    auth: await testClaudeAuth(),
+    ready: await testClaudeReady(),
     simple: await testSimpleCommand(),
     flags: await testWithFlags()
   };
@@ -213,7 +213,7 @@ async function runTests() {
   console.log('\n=== Test Results Summary ===');
   console.log(`Claude CLI Available: ${results.availability ? '✅' : '❌'}`);
   console.log(`Version Check: ${results.version ? '✅' : '❌'}`);
-  console.log(`Authentication: ${results.auth ? '✅' : '❌'}`);
+  console.log(`CLI Ready: ${results.ready ? '✅' : '❌'}`);
   console.log(`Simple Command: ${results.simple ? '✅' : '❌'}`);
   console.log(`Production Flags: ${results.flags ? '✅' : '❌'}`);
   
