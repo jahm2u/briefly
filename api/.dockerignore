@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+dist
+.git
+.github
+.vscode
+.env
+.env.*
+!.env.example
+coverage
+test
+*.md
+docker-compose.yml
+Dockerfile
+.eslintrc.js
+.prettierrc
+jest.config.js

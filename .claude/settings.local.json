@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__zen__analyze",
+      "Bash(npm run test:integration:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(docker-compose:*)",
+      "Bash(curl:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker exec:*)",
+      "Bash(npm run test:unit:*)",
+      "Bash(git add:*)",
+      "mcp__zen__precommit",
+      "Bash(rm:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "mcp__zen__codereview",
+      "Bash(grep:*)",
+      "Bash(npm test:*)",
+      "Bash(find:*)",
+      "Bash(npm run dev:morning:*)",
+      "Bash(npm run:*)",
+      "Bash(ls:*)",
+      "Bash(ln:*)",
+      "mcp__zen__thinkdeep",
+      "Bash(npm install:*)",
+      "Bash(pm2 logs:*)",
+      "Bash(docker compose logs:*)",
+      "Bash(docker compose:*)"
+    ],
+    "deny": []
+  }
+}

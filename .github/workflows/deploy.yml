@@ -1,0 +1,79 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to DigitalOcean
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DIGITALOCEAN_HOST }}
+          username: ${{ secrets.DIGITALOCEAN_USERNAME }}
+          key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
+          script: |
+            # Navigate to app directory
+            cd /root/briefly
+
+            # Gracefully stop the PM2 process and wait
+            pm2 stop briefly || true
+            sleep 5  # Give time for graceful shutdown
+
+            # Delete the process to ensure clean restart
+            pm2 delete briefly || true
+            sleep 2  # Wait for process cleanup
+
+            # Check if port 5100 is still in use
+            if lsof -i:5100; then
+              echo "Port 5100 is still in use. Killing process..."
+              fuser -k 5100/tcp
+              sleep 2
+            fi
+
+            # Backup current .env file
+            cp .env .env.backup || true
+
+            # Pull latest changes
+            git pull origin main
+
+            # Restore .env file
+            cp .env.backup .env || true
+            rm .env.backup 2>/dev/null || true
+
+            # Navigate to api directory for build
+            cd api
+
+            # Install dependencies
+            npm install
+
+            # Build the application
+            npm run build
+
+            # Start the PM2 process with specific port
+            PORT=5100 pm2 start dist/main.js --name briefly
+
+            # Wait for process to start and verify it's running
+            for i in {1..12}; do
+              if pm2 show briefly | grep -q "online"; then
+                # Save PM2 process list
+                pm2 save
+
+                # Show status
+                pm2 status
+                echo "Deployment successful!"
+                exit 0
+              fi
+              sleep 5
+            done
+
+            # If we get here, the process didn't start properly
+            echo "Failed to start process"
+            pm2 logs briefly --lines 50
+            exit 1

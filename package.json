@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@doist/todoist-api-typescript": "^4.0.4",
+    "dotenv": "^16.5.0",
+    "ical.js": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.26"
+  }
+}
