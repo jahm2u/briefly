@@ -35,7 +35,7 @@ jobs:
             # Switch to briefly user for deployment
             sudo -u briefly bash << 'EOF'
               # Navigate to app directory
-              cd /home/briefly/briefly
+              cd /home/briefly/
 
               # Backup current .env file
               cp .env .env.backup
