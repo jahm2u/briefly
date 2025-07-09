@@ -1,9 +1,6 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { Injectable, Logger } from '@nestjs/common';
+import { spawn } from 'child_process';
 import * as path from 'path';
-
-const execAsync = promisify(exec);
 
 export interface ClaudeResponse {
   type: 'confirmation' | 'information' | 'error' | 'success';
@@ -22,135 +19,15 @@ export interface ClaudeResponse {
 }
 
 @Injectable()
-export class ClaudeCliService implements OnModuleInit {
+export class ClaudeCliService {
   private readonly logger = new Logger(ClaudeCliService.name);
-  private claudeQuery: any = null;
 
-  // NestJS will call this method once the module has been initialized
-  async onModuleInit() {
+  async executeCommand(userRequest: string): Promise<ClaudeResponse> {
     try {
-      this.logger.log('Initializing Claude SDK...');
-      
-      // Dynamic import for ES module compatibility
-      const claudeModule = await import('@anthropic-ai/claude-code');
-      this.claudeQuery = claudeModule.query;
-      
-      this.logger.log('Claude SDK initialized successfully');
-    } catch (error) {
-      this.logger.error('Failed to initialize Claude SDK', error);
-      // Don't throw - allow app to start but log the error
-      // The executeCommand method will handle the case where claudeQuery is null
-    }
-  }
-
-  async executeCommand(
-    userRequest: string,
-  ): Promise<ClaudeResponse> {
-    try {
-      // Check if SDK is available
-      if (!this.claudeQuery) {
-        this.logger.error('Claude SDK not available - falling back to CLI');
-        return await this.executeWithCLI(userRequest);
-      }
-
-      console.log(`[Claude] Starting TypeScript SDK execution at: ${new Date().toISOString()}`);
+      console.log(`[Claude] Starting CLI execution at: ${new Date().toISOString()}`);
       console.log(`[Claude] Request: ${userRequest}`);
-
-      const messages: any[] = [];
-      const abortController = new AbortController();
-
-      // Set timeout for the operation
-      const timeoutId = setTimeout(() => {
-        abortController.abort();
-      }, 300000); // 5 minutes timeout
-
-      try {
-        // Use TypeScript SDK with proper working directory
-        for await (const message of this.claudeQuery({
-          prompt: userRequest,
-          abortController,
-          options: {
-            maxTurns: 5,
-            cwd: path.join(process.cwd(), '..'),
-            permissionMode: 'acceptEdits', // Accept file edits automatically
-          },
-        })) {
-          messages.push(message);
-          console.log(`[Claude] Received message type: ${message.type}`);
-        }
-      } finally {
-        clearTimeout(timeoutId);
-      }
-
-      console.log(`[Claude] Execution completed at: ${new Date().toISOString()}`);
-      console.log(`[Claude] Total messages received: ${messages.length}`);
-
-      // Extract the final result
-      const resultMessage = messages.find(msg => msg.type === 'result');
-      if (resultMessage && 'result' in resultMessage) {
-        return {
-          type: 'success',
-          message: resultMessage.result,
-          metadata: {
-            command: 'sdk',
-            sessionId: resultMessage.session_id,
-            totalCost: 'total_cost_usd' in resultMessage ? resultMessage.total_cost_usd : undefined,
-            numTurns: 'num_turns' in resultMessage ? resultMessage.num_turns : undefined,
-          },
-        };
-      }
-
-      // If no result message, extract from assistant messages
-      const assistantMessages = messages.filter(msg => msg.type === 'assistant');
-      if (assistantMessages.length > 0) {
-        const lastMessage = assistantMessages[assistantMessages.length - 1];
-        const content = lastMessage.message.content;
-        const textContent = Array.isArray(content) 
-          ? content.filter(c => c.type === 'text').map(c => c.text).join('\n')
-          : typeof content === 'string' ? content : 'Operation completed';
-
-        return {
-          type: 'information',
-          message: textContent,
-          metadata: {
-            command: 'sdk',
-            sessionId: lastMessage.session_id,
-          },
-        };
-      }
-
-      return {
-        type: 'error',
-        message: 'No response received from Claude',
-        metadata: { command: 'sdk' },
-      };
-
-    } catch (error) {
-      console.error('[Claude] Error executing Claude SDK:', error);
       
-      if (error.name === 'AbortError') {
-        return {
-          type: 'error',
-          message: 'Claude operation timed out after 5 minutes',
-          metadata: { command: 'sdk' },
-        };
-      }
-
-      // If SDK fails, fall back to CLI
-      this.logger.warn('Claude SDK failed, falling back to CLI');
-      return await this.executeWithCLI(userRequest);
-    }
-  }
-
-  // Fallback CLI implementation with proper security
-  private async executeWithCLI(userRequest: string): Promise<ClaudeResponse> {
-    try {
-      console.log(`[Claude] Executing CLI fallback at: ${new Date().toISOString()}`);
-      
-      // Use spawn instead of exec to avoid command injection
-      const { spawn } = require('child_process');
-      
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const claude = spawn('claude', ['-p', '--output-format', 'json', '--max-turns', '5', userRequest], {
           cwd: path.join(process.cwd(), '..'),
           timeout: 300000, // 5 minutes
@@ -168,6 +45,10 @@ export class ClaudeCliService implements OnModuleInit {
         });
 
         claude.on('close', (code) => {
+          console.log(`[Claude] CLI process closed with code: ${code}`);
+          console.log(`[Claude] CLI stdout (${stdout.length} chars):`, stdout);
+          console.log(`[Claude] CLI stderr:`, stderr);
+          
           if (code === 0) {
             resolve(this.parseClaudeResponse(stdout, stderr, 'cli'));
           } else {
@@ -180,6 +61,7 @@ export class ClaudeCliService implements OnModuleInit {
         });
 
         claude.on('error', (error) => {
+          console.log(`[Claude] CLI process error: ${error.message}`);
           resolve({
             type: 'error',
             message: `CLI execution failed: ${error.message}`,
@@ -188,9 +70,10 @@ export class ClaudeCliService implements OnModuleInit {
         });
       });
     } catch (error) {
+      console.error('[Claude] Error executing Claude CLI:', error);
       return {
         type: 'error',
-        message: `CLI fallback failed: ${error.message}`,
+        message: `Failed to execute Claude CLI: ${error.message}`,
         metadata: { command: 'cli' },
       };
     }

@@ -22,7 +22,6 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.0",
     "@doist/todoist-api-typescript": "^4.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
