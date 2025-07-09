@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import * as fs from 'fs/promises';
 import * as path from 'path';
 import { CommandSelection } from './claude-command-selector.service';
 
@@ -20,45 +19,14 @@ export interface ClaudeResponse {
 
 @Injectable()
 export class ClaudeCliService {
-  private readonly claudeDir = path.join(process.cwd(), '..', '.claude');
-  private readonly commandsDir = path.join(this.claudeDir, 'commands');
 
   async executeCommand(
     selection: CommandSelection,
     userRequest: string,
   ): Promise<ClaudeResponse> {
     try {
-      // Load the appropriate command template
-      const templatePath = path.join(
-        this.commandsDir,
-        `${selection.command}_t.md`,
-      );
-      
-      // Check if the template file exists
-      try {
-        await fs.access(templatePath);
-      } catch (error) {
-        console.error(`[Claude] Template file not found: ${templatePath}`);
-        return {
-          type: 'error',
-          message: `Template file not found: ${selection.command}_t.md. Please ensure the .claude/commands/ directory exists in the project root with the necessary template files.`,
-          metadata: {
-            command: selection.command,
-          },
-        };
-      }
-      
-      let template = await fs.readFile(templatePath, 'utf-8');
-
-      // Replace $ARGUMENTS with the actual request
-      template = template.replace('# $ARGUMENTS', userRequest);
-
-      // Create a temporary file for the command
-      const tempFile = path.join(this.claudeDir, `temp_${Date.now()}.md`);
-      await fs.writeFile(tempFile, template);
-
-      // Execute Claude CLI by piping the template content
-      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && cat ${tempFile} | claude -p --output-format json --max-turns 10 --verbose`;
+      // Execute Claude CLI with the selected command and user request
+      const claudeCommand = `cd ${path.join(process.cwd(), '..')} && claude "/${selection.command}_t ${userRequest}" -p --output-format json --max-turns 10 --verbose`;
 
       console.log(`[Claude] Executing: ${claudeCommand}`);
 
@@ -66,9 +34,6 @@ export class ClaudeCliService {
         timeout: 600000, // 10 minutes for complex operations
         maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large outputs
       });
-
-      // Clean up temp file
-      await fs.unlink(tempFile).catch(() => {});
 
       // Parse Claude's response and extract important information
       const response = await this.parseClaudeResponse(
